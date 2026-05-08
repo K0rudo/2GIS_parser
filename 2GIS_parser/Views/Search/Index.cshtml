@@ -1,0 +1,35 @@
+﻿@{
+    ViewData["Title"] = "Поиск организаций";
+}
+
+<div style="background: linear-gradient(135deg, #3B455E 0%, #81414D 50%, #DE2028 100%); padding: 60px 20px; margin-bottom: 40px; text-align: center;">
+    <h1 style="font-size: 2.5rem; font-weight: bold; color: white; margin-bottom: 10px;">Поиск организаций</h1>
+    <p style="font-size: 1.1rem; color: rgba(255,255,255,0.85);">Найдите компании в любом городе России</p>
+</div>
+
+<div style="max-width: 700px; margin: 0 auto; padding: 0 20px;">
+    <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 8px 32px rgba(59,69,94,0.15);">
+        <form asp-action="Search" method="post">
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: 600; color: #3B455E; margin-bottom: 8px; display: block; font-size: 1rem;">🏙️ Город</label>
+                <input type="text" name="city"
+                       class="form-control form-control-lg"
+                       placeholder="Например: Иркутск"
+                       style="border: 2px solid #e0e0e0; border-radius: 10px;"
+                       required />
+            </div>
+            <div style="margin-bottom: 28px;">
+                <label style="font-weight: 600; color: #3B455E; margin-bottom: 8px; display: block; font-size: 1rem;">🔍 Что искать</label>
+                <input type="text" name="query"
+                       class="form-control form-control-lg"
+                       placeholder="Например: бизнес центры"
+                       style="border: 2px solid #e0e0e0; border-radius: 10px;"
+                       required />
+            </div>
+            <button type="submit" class="btn btn-lg w-100"
+                    style="background: linear-gradient(90deg, #DE2028, #81414D); color: white; border: none; border-radius: 10px; padding: 14px; font-size: 1.1rem; font-weight: 600;">
+                Найти организации
+            </button>
+        </form>
+    </div>
+</div>

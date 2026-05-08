@@ -1,0 +1,788 @@
+﻿@model List<_2GIS_parser.Models.Organization>
+@{
+    ViewData["Title"] = "Результаты поиска";
+    ViewData["Page"] = "search";
+    var job = ViewBag.Job as _2GIS_parser.Models.ParseJob;
+    var categories = ViewBag.Categories as List<string?> ?? new List<string?>();
+    var sortBy      = ViewBag.SortBy as string ?? "";
+    var filterCat   = ViewBag.FilterCategory as string ?? "";
+
+    // Serialize orgs with coords to JSON for Leaflet
+    var orgsJson = System.Text.Json.JsonSerializer.Serialize(
+        Model.Where(o => o.Latitude.HasValue && o.Longitude.HasValue)
+             .Select(o => new {
+                 id      = o.Id,
+                 name    = o.Name ?? "",
+                 address = o.Address ?? "",
+                 lat     = (double)o.Latitude!.Value,
+                 lon     = (double)o.Longitude!.Value,
+                 rating  = o.Rating.HasValue ? (double?)o.Rating.Value : null
+             }));
+}
+
+
+<style>
+    /* ── Hero ────────────────────────────────────────── */
+    .results-hero {
+        background: linear-gradient(135deg, #3B455E 0%, #81414D 50%, #DE2028 100%);
+        padding: 22px 28px;
+        color: white;
+    }
+
+    .results-hero h2 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin: 0 0 6px;
+    }
+
+    .hero-meta {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 0.83rem;
+        color: rgba(255,255,255,0.75);
+        flex-wrap: wrap;
+    }
+
+    .status-badge {
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .status-Completed { background: rgba(34,197,94,0.25);  color: #86efac; }
+    .status-Running   { background: rgba(251,191,36,0.25); color: #fde68a; }
+    .status-Failed    { background: rgba(239,68,68,0.25);  color: #fca5a5; }
+    .status-Pending   { background: rgba(148,163,184,0.25);color: #cbd5e1; }
+
+    .btn-back-hero {
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.25);
+        border-radius: 8px;
+        color: rgba(255,255,255,0.9);
+        padding: 6px 16px;
+        font-size: 0.83rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background 0.18s;
+    }
+
+    .btn-back-hero:hover {
+        background: rgba(255,255,255,0.22);
+        color: white;
+        text-decoration: none;
+    }
+
+    /* ── Filter bar ──────────────────────────────────── */
+    .filter-bar {
+        background: white;
+        border-bottom: 1px solid #e8ecf4;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    .filter-bar .form-select {
+        border: 1.5px solid #e8ecf4;
+        border-radius: 8px;
+        font-size: 0.83rem;
+        padding: 6px 28px 6px 10px;
+        width: auto;
+    }
+
+    .filter-bar .form-select:focus {
+        border-color: #DE2028;
+        box-shadow: 0 0 0 3px rgba(222,32,40,0.1);
+    }
+
+    .filter-input {
+        border: 1.5px solid #e8ecf4;
+        border-radius: 8px;
+        font-size: 0.83rem;
+        padding: 6px 12px;
+        outline: none;
+        min-width: 190px;
+        font-family: inherit;
+    }
+
+    .filter-input:focus {
+        border-color: #DE2028;
+        box-shadow: 0 0 0 3px rgba(222,32,40,0.1);
+    }
+
+    .count-label {
+        margin-left: auto;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #64748b;
+        white-space: nowrap;
+    }
+
+    /* ── Split layout ────────────────────────────────── */
+    .split-layout {
+        display: flex;
+        height: calc(100vh - 68px - 80px - 53px);
+        overflow: hidden;
+    }
+
+    /* ── Cards panel ─────────────────────────────────── */
+    .cards-panel {
+        width: 45%;
+        overflow-y: auto;
+        padding: 14px;
+        background: #f0f3f8;
+    }
+    .card-details {
+        display: none;
+        padding: 10px 15px;
+        border-top: 1px solid #f0f4f8;
+        background: #fafbfe;
+        font-size: 0.8rem;
+        color: #475569;
+        gap: 6px;
+        flex-direction: column;
+    }
+
+    .card-details.open { display: flex; }
+
+    .detail-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .detail-label {
+        font-weight: 700;
+        color: #3B455E;
+        white-space: nowrap;
+        min-width: 80px;
+    }
+
+    .btn-toggle {
+        width: 100%;
+        background: none;
+        border: none;
+        border-top: 1px solid #f0f4f8;
+        padding: 7px 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #94a3b8;
+        cursor: pointer;
+        text-align: left;
+        font-family: inherit;
+        transition: color 0.18s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-toggle:hover { color: #3B455E; }
+
+    .btn-toggle .arrow {
+        transition: transform 0.2s;
+        display: inline-block;
+    }
+
+    .btn-toggle.open .arrow { transform: rotate(180deg); }
+    .cards-panel::-webkit-scrollbar { width: 4px; }
+    .cards-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    /* ── Org card ────────────────────────────────────── */
+    .org-card {
+        background: white;
+        border-radius: 12px;
+        border: 2px solid transparent;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 10px rgba(0,0,0,0.05);
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.18s;
+        overflow: hidden;
+    }
+
+    .org-card:hover {
+        border-color: #e2e8f0;
+        box-shadow: 0 4px 18px rgba(59,69,94,0.12);
+        transform: translateY(-1px);
+    }
+
+    .org-card.active {
+        border-color: #DE2028;
+        box-shadow: 0 4px 18px rgba(222,32,40,0.15);
+    }
+
+    .card-top {
+        padding: 13px 15px 9px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .org-name {
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: #1a2236;
+        line-height: 1.35;
+        flex: 1;
+    }
+
+    .rating-pill {
+        background: rgba(222,32,40,0.08);
+        color: #DE2028;
+        border-radius: 20px;
+        padding: 3px 9px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .card-mid {
+        padding: 0 15px 10px;
+    }
+
+    .org-address {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
+
+    .cat-badge {
+        display: inline-block;
+        background: rgba(59,69,94,0.08);
+        color: #3B455E;
+        border-radius: 6px;
+        padding: 2px 8px;
+        font-size: 0.73rem;
+        font-weight: 600;
+    }
+
+    /* Contacts */
+    .card-contacts {
+        padding: 8px 15px;
+        border-top: 1px solid #f0f4f8;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .contact-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        padding: 3px 9px;
+        border-radius: 20px;
+        text-decoration: none;
+        transition: opacity 0.15s;
+    }
+
+    .contact-chip:hover { opacity: 0.75; text-decoration: none; }
+    .chip-phone    { background: rgba(34,197,94,0.1);   color: #16a34a; }
+    .chip-email    { background: rgba(59,130,246,0.1);  color: #2563eb; }
+    .chip-website  { background: rgba(100,116,139,0.1); color: #475569; }
+    .chip-telegram { background: rgba(0,136,204,0.1);   color: #0088cc; }
+    .chip-whatsapp { background: rgba(37,211,102,0.1);  color: #16a34a; }
+
+    /* Card footer */
+    .card-footer {
+        padding: 9px 15px;
+        border-top: 1px solid #f0f4f8;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .reviews-text {
+        font-size: 0.76rem;
+        color: #94a3b8;
+    }
+
+    .btn-route {
+        background: #DE2028;
+        color: white;
+        border: none;
+        border-radius: 7px;
+        padding: 5px 14px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.18s;
+    }
+
+    .btn-route:hover {
+        background: #b51920;
+        transform: translateY(-1px);
+    }
+
+    /* Empty state */
+    .empty-cards {
+        text-align: center;
+        padding: 60px 20px;
+        color: #94a3b8;
+    }
+
+    .empty-cards h5 { color: #3B455E; margin-top: 12px; font-size: 1rem; }
+
+    /* ── Map panel ───────────────────────────────────── */
+    .map-panel {
+        width: 55%;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid #e2e8f0;
+    }
+
+    .map-address-bar {
+        display: flex;
+        gap: 8px;
+        padding: 10px 12px;
+        background: white;
+        border-bottom: 1px solid #e2e8f0;
+        flex-shrink: 0;
+    }
+
+    .map-address-bar input {
+        flex: 1;
+        border: 1.5px solid #e8ecf4;
+        border-radius: 8px;
+        padding: 7px 12px;
+        font-size: 0.83rem;
+        font-family: inherit;
+        outline: none;
+    }
+
+    .map-address-bar input:focus { border-color: #DE2028; }
+
+    .map-address-bar button {
+        background: #DE2028;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 7px 16px;
+        font-size: 0.83rem;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .map-address-bar input.success {
+        border-color: #16a34a;
+        background: rgba(34,197,94,0.05);
+    }
+
+    .map-address-bar input.error {
+        border-color: #DE2028;
+        background: rgba(222,32,40,0.05);
+    }
+
+    .address-hint {
+        font-size: 0.75rem;
+        padding: 4px 12px 6px;
+        background: white;
+    }
+
+    .address-hint.success { color: #16a34a; }
+    .address-hint.error   { color: #DE2028; }
+    #map { width: 100%; flex: 1; }
+</style>
+
+<!-- Hero -->
+<div class="results-hero">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+            <h2>«@job?.SearchQuery» — @job?.City</h2>
+            <div class="hero-meta">
+                <span class="status-badge status-@job?.Status">@job?.Status</span>
+                <span>Найдено: <strong style="color:#fff">@Model.Count</strong></span>
+                @if (job?.CompletedAt.HasValue == true)
+                {
+                    <span>@job.CompletedAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
+                }
+            </div>
+        </div>
+        <a href="/Search" class="btn-back-hero">← Новый поиск</a>
+    </div>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+    <form method="get" style="display:contents">
+        <input type="hidden" name="jobId" value="@job?.Id" />
+        <select name="sortBy" class="form-select" id="sortSelect" onchange="this.form.submit()">
+            <option value="">Сортировка</option>
+            <option value="name">По названию</option>
+            <option value="rating">По рейтингу ↓</option>
+            <option value="reviews">По отзывам ↓</option>
+        </select>
+
+        <select name="filterCategory" class="form-select" id="catSelect" onchange="this.form.submit()">
+            <option value="">Все категории</option>
+            @foreach (var cat in categories)
+            {
+                <option value="@cat">@cat</option>
+            }
+        </select>
+    </form>
+    <input type="text" id="liveSearch" class="filter-input" placeholder="🔍 Поиск по названию..." />
+    <span class="count-label" id="countLabel">@Model.Count орг.</span>
+</div>
+
+<!-- Split layout -->
+<div class="split-layout">
+
+    <!-- Cards -->
+    <div class="cards-panel">
+
+        @if (!Model.Any())
+        {
+            <div class="empty-cards">
+                <div style="font-size:2.5rem">🔍</div>
+                <h5>Ничего не найдено</h5>
+                <p style="font-size:0.85rem">Измените запрос или уберите фильтр</p>
+            </div>
+        }
+
+        @foreach (var org in Model)
+        {
+            var phones    = org.Contacts.Where(c => c.ContactType == "phone").ToList();
+            var emails    = org.Contacts.Where(c => c.ContactType == "email").ToList();
+            var websites  = org.Contacts.Where(c => c.ContactType == "website").ToList();
+            var telegrams = org.Contacts.Where(c => c.ContactType == "telegram").ToList();
+            var whatsapps = org.Contacts.Where(c => c.ContactType == "whatsapp").ToList();
+            var hasContacts = phones.Any() || emails.Any() || websites.Any() || telegrams.Any() || whatsapps.Any();
+
+            var latStr = org.Latitude?.ToString("F6",  System.Globalization.CultureInfo.InvariantCulture) ?? "";
+            var lonStr = org.Longitude?.ToString("F6", System.Globalization.CultureInfo.InvariantCulture) ?? "";
+
+            <div class="org-card"
+                 id="card-@org.Id"
+                 data-id="@org.Id"
+                 data-lat="@latStr"
+                 data-lon="@lonStr"
+                 onclick="cardClick(this)">
+
+                <div class="card-top">
+                    <div class="org-name">@org.Name</div>
+                    @if (org.Rating.HasValue)
+                    {
+                        <div class="rating-pill">⭐ @org.Rating.Value.ToString("F1")</div>
+                    }
+                </div>
+
+                <div class="card-mid">
+                    @if (!string.IsNullOrEmpty(org.Address))
+                    {
+                        <div class="org-address">📍 @org.Address</div>
+                    }
+                    @if (!string.IsNullOrEmpty(org.CategoryName))
+                    {
+                        <span class="cat-badge">@org.CategoryName</span>
+                    }
+                </div>
+
+                @if (hasContacts)
+                {
+                    <div class="card-contacts">
+                        @foreach (var p in phones)
+                        {
+                            <a href="tel:@p.Value" class="contact-chip chip-phone" onclick="event.stopPropagation()">📞 @p.Value</a>
+                        }
+                        @foreach (var e in emails)
+                        {
+                            <a href="mailto:@e.Value" class="contact-chip chip-email" onclick="event.stopPropagation()">✉️ @e.Value</a>
+                        }
+                        @foreach (var w in websites)
+                        {
+                            <a href="@w.Value" target="_blank" class="contact-chip chip-website" onclick="event.stopPropagation()">🌐 Сайт</a>
+                        }
+                        @foreach (var t in telegrams)
+                        {
+                            <a href="@t.Value" target="_blank" class="contact-chip chip-telegram" onclick="event.stopPropagation()">✈️ Telegram</a>
+                        }
+                        @foreach (var wa in whatsapps)
+                        {
+                            <a href="@wa.Value" target="_blank" class="contact-chip chip-whatsapp" onclick="event.stopPropagation()">💬 WhatsApp</a>
+                        }
+                    </div>
+                }
+
+                @{
+                    var hasDetails = !string.IsNullOrEmpty(org.WorkingHours) || !string.IsNullOrEmpty(org.District);
+                }
+                @if (hasDetails)
+                {
+                    <button class="btn-toggle" onclick="event.stopPropagation(); toggleDetails(this)">
+                        <span class="arrow">▼</span> Подробнее
+                    </button>
+                    <div class="card-details">
+                        @if (!string.IsNullOrEmpty(org.WorkingHours))
+                        {
+                            <div class="detail-row">
+                                <span class="detail-label">🕐 Часы:</span>
+                                <span>@org.WorkingHours</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(org.District))
+                        {
+                            <div class="detail-row">
+                                <span class="detail-label">📍 Район:</span>
+                                <span>@org.District</span>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="card-footer">
+                    <span class="reviews-text">
+                        @if (org.ReviewCount.HasValue && org.ReviewCount > 0) { @($"{org.ReviewCount} отзывов") }
+                    </span>
+                    @if (!string.IsNullOrEmpty(latStr) && !string.IsNullOrEmpty(lonStr))
+                    {
+                        <button class="btn-route"
+                                data-lat="@latStr"
+                                data-lon="@lonStr"
+                                onclick="event.stopPropagation(); openRoute(this)">
+                            🗺️ Маршрут
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Map -->
+    <div class="map-panel">
+        <div class="map-address-bar">
+            <input type="text" id="userAddress" placeholder="Введите ваш адрес для маршрута..." />
+            <button onclick="geocodeAddress()">Найти</button>
+        </div>
+        <div class="address-hint" id="addressHint"></div>
+        <div id="map"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://mapgl.2gis.com/api/js/v1"></script>
+    <script src="https://unpkg.com/@@2gis/mapgl-directions@@2/dist/directions.js"></script>
+    <script>
+    // ts-nocheck
+    const orgs = @Html.Raw(orgsJson);
+    const API_KEY = 'd18a4a4a-f927-44e1-82fc-77656e228906';
+
+    let map = null;
+    let directions = null;
+    const markers = {};
+    let activeId = null;
+    let userCoords = null;
+
+    if (orgs.length > 0) {
+        map = new mapgl.Map('map', {
+            center: [orgs[0].lon, orgs[0].lat],
+            zoom: 13,
+            key: API_KEY
+        });
+
+        orgs.forEach(org => {
+            const marker = new mapgl.Marker(map, {
+                coordinates: [org.lon, org.lat]
+            });
+            marker.on('click', () => {
+                activateCard(org.id);
+                const el = document.getElementById('card-' + org.id);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+            markers[org.id] = marker;
+        });
+
+        directions = new mapgl.Directions(map, {
+            directionsApiKey: API_KEY
+        });
+    } else {
+        document.getElementById('map').innerHTML =
+            '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#eef2f7;color:#94a3b8;gap:10px">' +
+            '<span style="font-size:2.5rem">🗺️</span><p style="font-weight:600;margin:0">Нет координат для карты</p></div>';
+    }
+
+    function activateCard(id) {
+        if (activeId !== null) {
+            document.getElementById('card-' + activeId)?.classList.remove('active');
+        }
+        activeId = id;
+        document.getElementById('card-' + id)?.classList.add('active');
+    }
+
+    function cardClick(el) {
+        const id  = parseInt(el.dataset.id);
+        const lat = parseFloat(el.dataset.lat);
+        const lon = parseFloat(el.dataset.lon);
+        activateCard(id);
+        if (map && lat && lon) {
+            map.setCenter([lon, lat]);
+            map.setZoom(16);
+        }
+    }
+
+    async function geocodeAddress() {
+        const input = document.getElementById('userAddress');
+        const hint  = document.getElementById('addressHint');
+        const address = input.value.trim();
+        if (!address) return;
+
+        hint.textContent = 'Поиск...';
+        hint.className = 'address-hint';
+
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
+            { headers: { 'User-Agent': 'SvyazTransit/1.0' } }
+        );
+        const data = await res.json();
+
+        if (!data.length) {
+            input.className = 'error';
+            hint.textContent = '✗ Адрес не найден. Уточните запрос.';
+            hint.className = 'address-hint error';
+            userCoords = null;
+            return;
+        }
+
+        userCoords = [parseFloat(data[0].lon), parseFloat(data[0].lat)];
+        input.className = 'success';
+
+        // Показываем найденный адрес (первые 3 части)
+        const foundAddress = data[0].display_name.split(',').slice(0, 3).join(',');
+        hint.textContent = `✓ Найдено: ${foundAddress}`;
+        hint.className = 'address-hint success';
+    }
+
+    function openRoute(btn) {
+        const lat = parseFloat(btn.dataset.lat);
+        const lon = parseFloat(btn.dataset.lon);
+        const input = document.getElementById('userAddress');
+        const hint  = document.getElementById('addressHint');
+
+        if (!userCoords) {
+            input.className = 'error';
+            hint.textContent = '✗ Сначала введите адрес и нажмите «Найти»';
+            hint.className = 'address-hint error';
+            input.focus();
+            return;
+        }
+
+        directions.carRoute({
+            points: [userCoords, [lon, lat]]
+        });
+    }
+
+    document.getElementById('liveSearch').addEventListener('input', function () {
+        const val = this.value.toLowerCase().trim();
+        let count = 0;
+        document.querySelectorAll('.org-card').forEach(card => {
+            const show = !val || card.textContent.toLowerCase().includes(val);
+            card.style.display = show ? '' : 'none';
+            if (show) count++;
+        });
+        document.getElementById('countLabel').textContent = count + ' орг.';
+    });
+
+    document.getElementById('sortSelect').value = '@sortBy';
+    document.getElementById('catSelect').value  = '@Html.Raw(filterCat)';
+
+    function toggleDetails(btn) {
+        const details = btn.nextElementSibling;
+        const isOpen = details.classList.contains('open');
+        details.classList.toggle('open');
+        btn.classList.toggle('open');
+        btn.innerHTML = isOpen
+            ? '<span class="arrow">▼</span> Подробнее'
+            : '<span class="arrow">▲</span> Скрыть';
+    }
+
+    // ── Polling контактов ─────────────────────────────────
+    const jobId = @job?.Id;
+    let pollCount = 0;
+    const maxPolls = 24; // ~2 минуты (каждые 5 сек)
+
+    function pollContacts() {
+        if (pollCount >= maxPolls) return;
+        pollCount++;
+
+        fetch(`/Search/Contacts?jobId=${jobId}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.length === 0) {
+                    setTimeout(pollContacts, 5000);
+                    return;
+                }
+
+                // Группируем контакты по orgId
+                const contactMap = {};
+                data.forEach(c => {
+                    if (!contactMap[c.orgId]) contactMap[c.orgId] = [];
+                    contactMap[c.orgId].push(c);
+                });
+
+                // Обновляем карточки
+                let allUpdated = true;
+                Object.keys(contactMap).forEach(orgId => {
+                    const card = document.getElementById('card-' + orgId);
+                    if (!card) return;
+
+                    const existingChips = card.querySelector('.card-contacts');
+                    if (existingChips) return; // уже есть контакты
+
+                    allUpdated = false;
+                    const contacts = contactMap[orgId];
+                    const chipsHtml = buildContactChips(contacts);
+                    if (!chipsHtml) return;
+
+                    // Вставляем перед кнопкой Подробнее
+                    const toggleBtn = card.querySelector('.btn-toggle');
+                    const insertBefore = toggleBtn || card.querySelector('.card-footer');
+                    if (insertBefore) {
+                        const div = document.createElement('div');
+                        div.className = 'card-contacts';
+                        div.innerHTML = chipsHtml;
+                        insertBefore.parentNode.insertBefore(div, insertBefore);
+                    }
+                });
+
+                // Продолжаем polling пока не завершится enrich
+                setTimeout(pollContacts, 5000);
+            })
+            .catch(() => setTimeout(pollContacts, 5000));
+    }
+
+    function buildContactChips(contacts) {
+        let html = '';
+        contacts.forEach(c => {
+            switch(c.type) {
+                case 'phone':
+                    html += `<a href="tel:${c.value}" class="contact-chip chip-phone" onclick="event.stopPropagation()">📞 ${c.value}</a>`;
+                    break;
+                case 'email':
+                    html += `<a href="mailto:${c.value}" class="contact-chip chip-email" onclick="event.stopPropagation()">✉️ ${c.value}</a>`;
+                    break;
+                case 'website':
+                    html += `<a href="${c.value}" target="_blank" class="contact-chip chip-website" onclick="event.stopPropagation()">🌐 Сайт</a>`;
+                    break;
+                case 'telegram':
+                    html += `<a href="${c.value}" target="_blank" class="contact-chip chip-telegram" onclick="event.stopPropagation()">✈️ Telegram</a>`;
+                    break;
+                case 'whatsapp':
+                    html += `<a href="${c.value}" target="_blank" class="contact-chip chip-whatsapp" onclick="event.stopPropagation()">💬 WhatsApp</a>`;
+                    break;
+            }
+        });
+        return html;
+    }
+
+    // Запускаем polling через 3 секунды после загрузки страницы
+    setTimeout(pollContacts, 3000);
+    </script>
+}

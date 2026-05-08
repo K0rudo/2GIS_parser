@@ -1,0 +1,108 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — СвязьТранзит</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <style>
+            :root {
+                --red: #DE2028;
+                --red-dark: #b51920;
+                --burgundy: #81414D;
+                --navy: #3B455E;
+                --blue: #59A8DD;
+                --bg: #f0f3f8;
+            }
+
+            body {
+                background: var(--bg);
+                color: #1a2236;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            main {
+                flex: 1;
+            }
+
+            .navbar {
+                background: var(--navy) !important;
+                padding: 0 2rem;
+                min-height: 68px;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+            }
+
+            .navbar-brand img {
+                height: 56px;
+            }
+
+            .navbar-nav .nav-link {
+                color: rgba(255,255,255,0.7) !important;
+                font-size: 0.88rem;
+                font-weight: 600;
+                padding: 0.45rem 1rem !important;
+                border-radius: 8px;
+                margin-left: 4px;
+                letter-spacing: 0.02em;
+                transition: all 0.18s;
+            }
+
+                .navbar-nav .nav-link:hover {
+                    color: #fff !important;
+                    background: rgba(255,255,255,0.1);
+                }
+
+                .navbar-nav .nav-link.active {
+                    color: #fff !important;
+                    background: var(--red);
+                }
+
+            footer {
+                background: var(--navy);
+                color: rgba(255,255,255,0.4);
+                text-align: center;
+                padding: 1.2rem;
+                font-size: 0.82rem;
+                letter-spacing: 0.02em;
+                margin-top: auto;
+            }
+
+                footer strong {
+                    color: var(--red);
+                }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <img src="/images/Логотип_квадратный_синий.png" alt="СвязьТранзит" />
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link @(ViewData["Page"]?.ToString() == "search" ? "active" : "")" href="/Search">
+                    Поиск
+                </a>
+                <a class="nav-link @(ViewData["Page"]?.ToString() == "instruction" ? "active" : "")" href="/Instruction">
+                    Инструкция
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <footer>
+        © 2026 <strong>СвязьТранзит</strong> — Связь вокруг технологий
+    </footer>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>
