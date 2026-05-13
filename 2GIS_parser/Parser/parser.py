@@ -17,17 +17,24 @@ API_KEY = "d18a4a4a-f927-44e1-82fc-77656e228906"
 def get_connection():
     return pyodbc.connect(conn_str)
 
-
-"""def search_organizations(city, query):
+def search_organizations(city, query):
     url = "https://catalog.api.2gis.com/3.0/items"
     params = {
         "q": f"{query} {city}",
         "key": API_KEY,
         "page_size": 10,
-        "fields": "items.contact_groups,items.address,items.rating,items.reviews,items.schedule,items.point,items.rubrics"
+        "fields": "items.contact_groups,items.address,items.rating,items.reviews,items.schedule,items.point,items.rubrics,items.adm_div"
     }
 
-    results = []
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    if "result" not in data or "items" not in data["result"]:
+        return []
+
+    return data["result"]["items"]
+
+    """results = []
     page = 1
 
     while True:
@@ -50,27 +57,17 @@ def get_connection():
 
     return results"""
 
-def search_organizations(city, query):
-    url = "https://catalog.api.2gis.com/3.0/items"
-    params = {
-        "q": f"{query} {city}",
-        "key": API_KEY,
-        "page_size": 10,
-        "fields": "items.contact_groups,items.address,items.rating,items.reviews,items.schedule,items.point,items.rubrics"
-    }
-
-    response = requests.get(url, params=params)
-    data = response.json()
-
-    if "result" not in data or "items" not in data["result"]:
-        return []
-
-    return data["result"]["items"]
-
 def save_organization(cursor, item, city, job_id):
     external_id = item.get("id", "")
     name = item.get("name", "")
     address = item.get("address_name", "")
+    # Район
+    district = ""
+    adm_div = item.get("adm_div", [])
+    for div in adm_div:
+        if div.get("type") == "district":
+            district = div.get("name", "")
+            break
 
     # Категория
     rubrics = item.get("rubrics", [])
@@ -109,21 +106,20 @@ def save_organization(cursor, item, city, job_id):
     row = cursor.fetchone()
 
     if row:
-        # Запись существует — ОБНОВЛЯЕМ
         org_id = row[0]
         cursor.execute("""
             UPDATE Organizations 
             SET Name=?, Address=?, CategoryName=?, Rating=?, ReviewCount=?, 
-                Latitude=?, Longitude=?, WorkingHours=?, UpdatedAt=GETDATE()
+                Latitude=?, Longitude=?, WorkingHours=?, District=?, UpdatedAt=GETDATE()
             WHERE Id=?
-        """, name, address, category, rating, reviews, lat, lon, working_hours, org_id)
-        cursor.execute("DELETE FROM Contacts WHERE OrganizationId=?", org_id)
+        """, name, address, category, rating, reviews, lat, lon, working_hours, district, org_id)
+        if item.get("contact_groups"):
+            cursor.execute("DELETE FROM Contacts WHERE OrganizationId=?", org_id)
     else:
-        # Записи нет — ВСТАВЛЯЕМ
         cursor.execute("""
-            INSERT INTO Organizations (ExternalId, Name, City, Address, CategoryName, Rating, ReviewCount, Latitude, Longitude, WorkingHours)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, external_id, name, city, address, category, rating, reviews, lat, lon, working_hours)
+            INSERT INTO Organizations (ExternalId, Name, City, Address, CategoryName, Rating, ReviewCount, Latitude, Longitude, WorkingHours, District)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, external_id, name, city, address, category, rating, reviews, lat, lon, working_hours, district)
         cursor.execute("SELECT @@IDENTITY")
         org_id = int(cursor.fetchone()[0])
 

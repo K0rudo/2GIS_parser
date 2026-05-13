@@ -10,7 +10,7 @@ namespace _2GIS_parser.Models
         public DbSet<Contact> Contacts { get; set; }
         public DbSet<ParseJob> ParseJobs { get; set; }
         public DbSet<ParseJobOrganization> ParseJobOrganizations { get; set; }
-
+        public DbSet<CompanyOffice> CompanyOffices { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ParseJobOrganization>()

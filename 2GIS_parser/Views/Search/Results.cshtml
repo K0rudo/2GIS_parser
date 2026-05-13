@@ -136,58 +136,7 @@
         padding: 14px;
         background: #f0f3f8;
     }
-    .card-details {
-        display: none;
-        padding: 10px 15px;
-        border-top: 1px solid #f0f4f8;
-        background: #fafbfe;
-        font-size: 0.8rem;
-        color: #475569;
-        gap: 6px;
-        flex-direction: column;
-    }
 
-    .card-details.open { display: flex; }
-
-    .detail-row {
-        display: flex;
-        gap: 8px;
-        align-items: flex-start;
-    }
-
-    .detail-label {
-        font-weight: 700;
-        color: #3B455E;
-        white-space: nowrap;
-        min-width: 80px;
-    }
-
-    .btn-toggle {
-        width: 100%;
-        background: none;
-        border: none;
-        border-top: 1px solid #f0f4f8;
-        padding: 7px 15px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #94a3b8;
-        cursor: pointer;
-        text-align: left;
-        font-family: inherit;
-        transition: color 0.18s;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .btn-toggle:hover { color: #3B455E; }
-
-    .btn-toggle .arrow {
-        transition: transform 0.2s;
-        display: inline-block;
-    }
-
-    .btn-toggle.open .arrow { transform: rotate(180deg); }
     .cards-panel::-webkit-scrollbar { width: 4px; }
     .cards-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
@@ -261,35 +210,194 @@
         font-weight: 600;
     }
 
-    /* Contacts */
-    .card-contacts {
-        padding: 8px 15px;
+    /* ── Toggle button ───────────────────────────────── */
+    .btn-toggle {
+        width: 100%;
+        background: none;
+        border: none;
         border-top: 1px solid #f0f4f8;
+        padding: 8px 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #94a3b8;
+        cursor: pointer;
+        text-align: left;
+        font-family: inherit;
+        transition: color 0.18s;
         display: flex;
-        flex-wrap: wrap;
+        align-items: center;
         gap: 6px;
     }
 
-    .contact-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        font-size: 0.76rem;
-        font-weight: 600;
-        padding: 3px 9px;
-        border-radius: 20px;
-        text-decoration: none;
-        transition: opacity 0.15s;
+    .btn-toggle:hover { color: #3B455E; }
+
+    .btn-toggle .arrow {
+        transition: transform 0.2s;
+        display: inline-block;
     }
 
-    .contact-chip:hover { opacity: 0.75; text-decoration: none; }
-    .chip-phone    { background: rgba(34,197,94,0.1);   color: #16a34a; }
-    .chip-email    { background: rgba(59,130,246,0.1);  color: #2563eb; }
-    .chip-website  { background: rgba(100,116,139,0.1); color: #475569; }
-    .chip-telegram { background: rgba(0,136,204,0.1);   color: #0088cc; }
-    .chip-whatsapp { background: rgba(37,211,102,0.1);  color: #16a34a; }
+    .btn-toggle.open .arrow { transform: rotate(180deg); }
 
-    /* Card footer */
+    /* ── Details (раскрывающаяся секция) ─────────────── */
+    .card-details {
+        display: none;
+        padding: 0;
+        border-top: 1px solid #e8ecf4;
+        background: linear-gradient(180deg, #fafbfe 0%, #f5f7fb 100%);
+        font-size: 0.82rem;
+        color: #475569;
+        flex-direction: column;
+    }
+
+    .card-details.open { display: flex; }
+
+    .details-section {
+        padding: 14px 16px;
+    }
+
+    .details-section + .details-section {
+        border-top: 1px solid #e8ecf4;
+    }
+
+    .details-section-title {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #94a3b8;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Контакты — сетка из аккуратных строк */
+    .contacts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 8px 10px;
+        background: white;
+        border: 1px solid #e8ecf4;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.15s;
+        font-size: 0.8rem;
+        color: #334155;
+        font-weight: 500;
+        min-width: 0;
+    }
+
+    .contact-item:hover {
+        border-color: #cbd5e1;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(59,69,94,0.08);
+        text-decoration: none;
+        color: #1a2236;
+    }
+
+    .contact-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .contact-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .icon-phone    { background: rgba(34,197,94,0.12);   color: #16a34a; }
+    .icon-email    { background: rgba(59,130,246,0.12);  color: #2563eb; }
+    .icon-website  { background: rgba(100,116,139,0.12); color: #475569; }
+    .icon-telegram { background: rgba(0,136,204,0.12);   color: #0088cc; }
+    .icon-whatsapp { background: rgba(37,211,102,0.12);  color: #16a34a; }
+
+    /* Часы работы — компактная сетка по дням */
+    .hours-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+    }
+
+    .hour-cell {
+        background: white;
+        border: 1px solid #e8ecf4;
+        border-radius: 7px;
+        padding: 7px 4px;
+        text-align: center;
+        transition: all 0.15s;
+    }
+
+    .hour-cell.today {
+        background: rgba(222,32,40,0.06);
+        border-color: rgba(222,32,40,0.25);
+    }
+
+    .hour-cell.closed {
+        background: #f8fafc;
+        opacity: 0.6;
+    }
+
+    .hour-day {
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #94a3b8;
+        letter-spacing: 0.04em;
+        margin-bottom: 2px;
+    }
+
+    .hour-cell.today .hour-day { color: #DE2028; }
+
+    .hour-time {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #334155;
+        line-height: 1.2;
+    }
+
+    .hour-cell.today .hour-time { color: #1a2236; }
+    .hour-cell.closed .hour-time { color: #cbd5e1; font-style: italic; }
+
+    .hour-time.round-clock {
+        color: #16a34a;
+        font-weight: 700;
+    }
+
+    /* Район — мини-блок */
+    .district-block {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: white;
+        border: 1px solid #e8ecf4;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        color: #334155;
+    }
+
+    .district-block strong {
+        color: #1a2236;
+        font-weight: 700;
+    }
+
+    /* ── Card footer ─────────────────────────────────── */
     .card-footer {
         padding: 9px 15px;
         border-top: 1px solid #f0f4f8;
@@ -415,17 +523,43 @@
     <form method="get" style="display:contents">
         <input type="hidden" name="jobId" value="@job?.Id" />
         <select name="sortBy" class="form-select" id="sortSelect" onchange="this.form.submit()">
-            <option value="">Сортировка</option>
+            <option value="" disabled>Сортировка</option>
             <option value="name">По названию</option>
             <option value="rating">По рейтингу ↓</option>
             <option value="reviews">По отзывам ↓</option>
+            <option value="distance">По удалённости от офиса</option>
         </select>
 
+        @if (sortBy == "distance")
+        {
+            <select name="officeId" class="form-select" id="officeSelect" onchange="this.form.submit()">
+                <option value="">Выберите офис</option>
+               @foreach (var office in (ViewBag.Offices as List<_2GIS_parser.Models.CompanyOffice> ?? new List<_2GIS_parser.Models.CompanyOffice>()))
+                {
+                    var isSelected = ViewBag.OfficeId != null && (int)ViewBag.OfficeId == office.Id;
+                    <option value="@office.Id" selected="@isSelected">@office.Name</option>
+                }
+            </select>
+        }
         <select name="filterCategory" class="form-select" id="catSelect" onchange="this.form.submit()">
             <option value="">Все категории</option>
             @foreach (var cat in categories)
             {
                 <option value="@cat">@cat</option>
+            }
+        </select>
+        <select name="filterDistrict" class="form-select" id="districtSelect" onchange="this.form.submit()">
+            <option value="">Все районы</option>
+            @foreach (var district in (ViewBag.Districts as List<string?> ?? new List<string?>()).Where(d => !string.IsNullOrEmpty(d)))
+            {
+                if (ViewBag.FilterDistrict != null && ViewBag.FilterDistrict == district)
+                {
+                    <option value="@district" selected>@district</option>
+                }
+                else
+                {
+                    <option value="@district">@district</option>
+                }
             }
         </select>
     </form>
@@ -456,6 +590,7 @@
             var telegrams = org.Contacts.Where(c => c.ContactType == "telegram").ToList();
             var whatsapps = org.Contacts.Where(c => c.ContactType == "whatsapp").ToList();
             var hasContacts = phones.Any() || emails.Any() || websites.Any() || telegrams.Any() || whatsapps.Any();
+            var hasDetails  = hasContacts || !string.IsNullOrEmpty(org.WorkingHours) || !string.IsNullOrEmpty(org.District);
 
             var latStr = org.Latitude?.ToString("F6",  System.Globalization.CultureInfo.InvariantCulture) ?? "";
             var lonStr = org.Longitude?.ToString("F6", System.Globalization.CultureInfo.InvariantCulture) ?? "";
@@ -486,53 +621,70 @@
                     }
                 </div>
 
-                @if (hasContacts)
-                {
-                    <div class="card-contacts">
-                        @foreach (var p in phones)
-                        {
-                            <a href="tel:@p.Value" class="contact-chip chip-phone" onclick="event.stopPropagation()">📞 @p.Value</a>
-                        }
-                        @foreach (var e in emails)
-                        {
-                            <a href="mailto:@e.Value" class="contact-chip chip-email" onclick="event.stopPropagation()">✉️ @e.Value</a>
-                        }
-                        @foreach (var w in websites)
-                        {
-                            <a href="@w.Value" target="_blank" class="contact-chip chip-website" onclick="event.stopPropagation()">🌐 Сайт</a>
-                        }
-                        @foreach (var t in telegrams)
-                        {
-                            <a href="@t.Value" target="_blank" class="contact-chip chip-telegram" onclick="event.stopPropagation()">✈️ Telegram</a>
-                        }
-                        @foreach (var wa in whatsapps)
-                        {
-                            <a href="@wa.Value" target="_blank" class="contact-chip chip-whatsapp" onclick="event.stopPropagation()">💬 WhatsApp</a>
-                        }
-                    </div>
-                }
-
-                @{
-                    var hasDetails = !string.IsNullOrEmpty(org.WorkingHours) || !string.IsNullOrEmpty(org.District);
-                }
                 @if (hasDetails)
                 {
                     <button class="btn-toggle" onclick="event.stopPropagation(); toggleDetails(this)">
                         <span class="arrow">▼</span> Подробнее
                     </button>
                     <div class="card-details">
+                        @if (hasContacts)
+                        {
+                            <div class="details-section">
+                                <div class="details-section-title">📇 Контакты</div>
+                                <div class="contacts-grid">
+                                    @foreach (var p in phones)
+                                    {
+                                        <a href="tel:@p.Value" class="contact-item" onclick="event.stopPropagation()">
+                                            <span class="contact-icon icon-phone">📞</span>
+                                            <span class="contact-text">@p.Value</span>
+                                        </a>
+                                    }
+                                    @foreach (var e in emails)
+                                    {
+                                        <a href="mailto:@e.Value" class="contact-item" onclick="event.stopPropagation()">
+                                            <span class="contact-icon icon-email">✉️</span>
+                                            <span class="contact-text">@e.Value</span>
+                                        </a>
+                                    }
+                                    @foreach (var w in websites)
+                                    {
+                                        <a href="@w.Value" target="_blank" class="contact-item" onclick="event.stopPropagation()">
+                                            <span class="contact-icon icon-website">🌐</span>
+                                            <span class="contact-text">Сайт</span>
+                                        </a>
+                                    }
+                                    @foreach (var t in telegrams)
+                                    {
+                                        <a href="@t.Value" target="_blank" class="contact-item" onclick="event.stopPropagation()">
+                                            <span class="contact-icon icon-telegram"><i class="fa-brands fa-telegram"></i></span>
+                                            <span class="contact-text">Telegram</span>
+                                        </a>
+                                    }
+                                    @foreach (var wa in whatsapps)
+                                    {
+                                        <a href="@wa.Value" target="_blank" class="contact-item" onclick="event.stopPropagation()">
+                                            <span class="contact-icon icon-whatsapp"><i class="fa-brands fa-whatsapp"></i></span>
+                                            <span class="contact-text">WhatsApp</span>
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        }
                         @if (!string.IsNullOrEmpty(org.WorkingHours))
                         {
-                            <div class="detail-row">
-                                <span class="detail-label">🕐 Часы:</span>
-                                <span>@org.WorkingHours</span>
+                            <div class="details-section">
+                                <div class="details-section-title">🕐 Часы работы</div>
+                                <div class="hours-grid" data-hours="@org.WorkingHours"></div>
                             </div>
                         }
                         @if (!string.IsNullOrEmpty(org.District))
                         {
-                            <div class="detail-row">
-                                <span class="detail-label">📍 Район:</span>
-                                <span>@org.District</span>
+                            <div class="details-section">
+                                <div class="details-section-title">📍 Расположение</div>
+                                <div class="district-block">
+                                    <span>🏙️</span>
+                                    <span>Район: <strong>@org.District</strong></span>
+                                </div>
                             </div>
                         }
                     </div>
@@ -598,6 +750,31 @@
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             });
             markers[org.id] = marker;
+        });
+
+        const offices = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            (ViewBag.Offices as List<_2GIS_parser.Models.CompanyOffice> ?? new List<_2GIS_parser.Models.CompanyOffice>())
+            .Select(o => new {
+                name    = o.Name,
+                address = o.Address,
+                floor   = o.Floor ?? "",
+                phone1  = o.Phone1 ?? "",
+                phone2  = o.Phone2 ?? "",
+                website = o.Website ?? "",
+                hours   = o.WorkingHours ?? "",
+                lat     = (double)o.Latitude,
+                lon     = (double)o.Longitude
+            })
+        ));
+
+       offices.forEach(function(office) {
+            const officeJson = JSON.stringify(office).replace(/'/g, "\\'");
+    
+            const marker = new mapgl.HtmlMarker(map, {
+                coordinates: [office.lon, office.lat],
+                html: '<div onclick=\'showOfficePopup(' + officeJson + ')\' style="cursor:pointer;"><svg width="24" height="34" viewBox="0 0 24 34" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 22 12 22s12-13 12-22C24 5.373 18.627 0 12 0z" fill="#DE2028" stroke="white" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="white"/></svg></div>',
+                anchor: [12, 34]
+            });
         });
 
         directions = new mapgl.Directions(map, {
@@ -703,6 +880,59 @@
             : '<span class="arrow">▲</span> Скрыть';
     }
 
+    // ── Парсинг строки часов в красивую сетку ────────────
+    function renderHoursGrid(container) {
+        const raw = container.dataset.hours;
+        if (!raw) return;
+
+        const daysOrder = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+        // JS Date: 0=вс, 1=пн... приводим к нашему формату 0=пн
+        const todayJs = new Date().getDay();
+        const todayIdx = todayJs === 0 ? 6 : todayJs - 1;
+
+        // Парсим расписание
+        const schedule = {};
+        raw.split(',').forEach(part => {
+            const m = part.trim().match(/^(Пн|Вт|Ср|Чт|Пт|Сб|Вс)\s+(.+)$/);
+            if (m) schedule[m[1]] = m[2].trim();
+        });
+
+        let html = '';
+        daysOrder.forEach((day, idx) => {
+            const time = schedule[day];
+            const isToday = idx === todayIdx;
+            const isClosed = !time || /выход|закр/i.test(time);
+            const is24h = time && (time === '00:00-24:00' || time === '00:00-23:59' || /круглосут/i.test(time));
+
+            let timeDisplay;
+            let timeClass = 'hour-time';
+
+            if (isClosed) {
+                timeDisplay = '—';
+            } else if (is24h) {
+                timeDisplay = '24/7';
+                timeClass += ' round-clock';
+            } else {
+                timeDisplay = time.replace('-', '–');
+            }
+
+            const cellClass = ['hour-cell'];
+            if (isToday) cellClass.push('today');
+            if (isClosed) cellClass.push('closed');
+
+            html += `<div class="${cellClass.join(' ')}">
+                <div class="hour-day">${day}</div>
+                <div class="${timeClass}">${timeDisplay}</div>
+            </div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    // Рендерим часы для всех карточек, отрисованных Razor'ом
+    document.querySelectorAll('.hours-grid').forEach(renderHoursGrid);
+
     // ── Polling контактов ─────────────────────────────────
     const jobId = @job?.Id;
     let pollCount = 0;
@@ -728,28 +958,43 @@
                 });
 
                 // Обновляем карточки
-                let allUpdated = true;
                 Object.keys(contactMap).forEach(orgId => {
                     const card = document.getElementById('card-' + orgId);
                     if (!card) return;
 
-                    const existingChips = card.querySelector('.card-contacts');
-                    if (existingChips) return; // уже есть контакты
+                    // Уже есть контакты — пропускаем (защита от дубликатов)
+                    if (card.querySelector('.contacts-grid')) return;
 
-                    allUpdated = false;
                     const contacts = contactMap[orgId];
-                    const chipsHtml = buildContactChips(contacts);
-                    if (!chipsHtml) return;
+                    const itemsHtml = buildContactItems(contacts);
+                    if (!itemsHtml) return;
 
-                    // Вставляем перед кнопкой Подробнее
-                    const toggleBtn = card.querySelector('.btn-toggle');
-                    const insertBefore = toggleBtn || card.querySelector('.card-footer');
-                    if (insertBefore) {
-                        const div = document.createElement('div');
-                        div.className = 'card-contacts';
-                        div.innerHTML = chipsHtml;
-                        insertBefore.parentNode.insertBefore(div, insertBefore);
+                    let details = card.querySelector('.card-details');
+                    let toggleBtn = card.querySelector('.btn-toggle');
+
+                    // Если у карточки ещё нет блока «Подробнее» — создаём его
+                    if (!details) {
+                        toggleBtn = document.createElement('button');
+                        toggleBtn.className = 'btn-toggle';
+                        toggleBtn.innerHTML = '<span class="arrow">▼</span> Подробнее';
+                        toggleBtn.onclick = function (e) { e.stopPropagation(); toggleDetails(this); };
+
+                        details = document.createElement('div');
+                        details.className = 'card-details';
+
+                        const footer = card.querySelector('.card-footer');
+                        card.insertBefore(toggleBtn, footer);
+                        card.insertBefore(details, footer);
                     }
+
+                    // Создаём секцию контактов и кладём её первой
+                    const section = document.createElement('div');
+                    section.className = 'details-section';
+                    section.innerHTML = `
+                        <div class="details-section-title">📇 Контакты</div>
+                        <div class="contacts-grid">${itemsHtml}</div>
+                    `;
+                    details.insertBefore(section, details.firstChild);
                 });
 
                 // Продолжаем polling пока не завершится enrich
@@ -758,25 +1003,21 @@
             .catch(() => setTimeout(pollContacts, 5000));
     }
 
-    function buildContactChips(contacts) {
+    function buildContactItems(contacts) {
+        const tpl = (icon, iconClass, text, href, target) =>
+            `<a href="${href}"${target ? ` target="${target}"` : ''} class="contact-item" onclick="event.stopPropagation()">
+                <span class="contact-icon ${iconClass}">${icon}</span>
+                <span class="contact-text">${text}</span>
+            </a>`;
+
         let html = '';
         contacts.forEach(c => {
             switch(c.type) {
-                case 'phone':
-                    html += `<a href="tel:${c.value}" class="contact-chip chip-phone" onclick="event.stopPropagation()">📞 ${c.value}</a>`;
-                    break;
-                case 'email':
-                    html += `<a href="mailto:${c.value}" class="contact-chip chip-email" onclick="event.stopPropagation()">✉️ ${c.value}</a>`;
-                    break;
-                case 'website':
-                    html += `<a href="${c.value}" target="_blank" class="contact-chip chip-website" onclick="event.stopPropagation()">🌐 Сайт</a>`;
-                    break;
-                case 'telegram':
-                    html += `<a href="${c.value}" target="_blank" class="contact-chip chip-telegram" onclick="event.stopPropagation()">✈️ Telegram</a>`;
-                    break;
-                case 'whatsapp':
-                    html += `<a href="${c.value}" target="_blank" class="contact-chip chip-whatsapp" onclick="event.stopPropagation()">💬 WhatsApp</a>`;
-                    break;
+                case 'phone':    html += tpl('📞', 'icon-phone',    c.value,    `tel:${c.value}`); break;
+                case 'email':    html += tpl('✉️', 'icon-email',    c.value,    `mailto:${c.value}`); break;
+                case 'website':  html += tpl('🌐', 'icon-website',  'Сайт',     c.value, '_blank'); break;
+                case 'telegram': html += tpl('<i class="fa-brands fa-telegram"></i>', 'icon-telegram', 'Telegram', c.value, '_blank'); break;
+                case 'whatsapp': html += tpl('<i class="fa-brands fa-whatsapp"></i>', 'icon-whatsapp', 'WhatsApp', c.value, '_blank'); break;
             }
         });
         return html;
@@ -784,5 +1025,51 @@
 
     // Запускаем polling через 3 секунды после загрузки страницы
     setTimeout(pollContacts, 3000);
+
+    function showOfficePopup(office) {
+        // Удаляем старый попап если есть
+        const old = document.getElementById('office-popup');
+        if (old) old.remove();
+
+        const popup = document.createElement('div');
+        popup.id = 'office-popup';
+        popup.innerHTML = `
+            <div style="
+                position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+                background:white; border-radius:14px; padding:20px 24px;
+                box-shadow:0 8px 32px rgba(0,0,0,0.18); z-index:9999;
+                min-width:300px; max-width:400px; font-family:inherit;
+            ">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <div style="font-weight:700;font-size:1rem;color:#1a2236">${office.name}</div>
+                    <button onclick="document.getElementById('office-popup').remove()"
+                        style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#94a3b8">✕</button>
+                </div>
+                <div style="font-size:0.82rem;color:#64748b;margin-bottom:4px">📍 ${office.address}${office.floor ? ', ' + office.floor : ''}</div>
+                ${office.phone1 ? `<div style="margin-top:8px"><a href="tel:${office.phone1}" style="color:#DE2028;font-weight:600;text-decoration:none">📞 ${office.phone1}</a></div>` : ''}
+                ${office.phone2 ? `<div style="margin-top:4px"><a href="tel:${office.phone2}" style="color:#DE2028;font-weight:600;text-decoration:none">📞 ${office.phone2}</a></div>` : ''}
+                ${office.website ? `<div style="margin-top:4px"><a href="${office.website}" target="_blank" style="color:#3B455E;text-decoration:none">🌐 ${office.website}</a></div>` : ''}
+                ${office.hours ? `<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border-radius:8px;font-size:0.78rem;color:#475569">🕐 ${office.hours}</div>` : ''}
+                ${office.hours ? `<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border-radius:8px;font-size:0.78rem;color:#475569">🕐 ${office.hours}</div>` : ''}
+                <button onclick="setOfficeAsOrigin(${office.lon}, ${office.lat}); document.getElementById('office-popup').remove();"
+                    style="margin-top:12px;width:100%;background:#DE2028;color:white;border:none;border-radius:8px;padding:8px;font-size:0.83rem;font-weight:700;cursor:pointer;font-family:inherit;">
+                    🗺️ Проложить маршрут отсюда
+                </button>
+                <div style="margin-top:4px;font-size:0.72rem;color:#DE2028;font-weight:600;text-align:center">Офис СвязьТранзит</div>
+            </div>
+            <div onclick="document.getElementById('office-popup').remove()"
+                style="position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.2)"></div>
+        `;
+        document.body.appendChild(popup);
+    }
+    function setOfficeAsOrigin(lon, lat) {
+        userCoords = [lon, lat];
+        const input = document.getElementById('userAddress');
+        const hint  = document.getElementById('addressHint');
+        input.value = 'Офис СвязьТранзит';
+        input.className = 'success';
+        hint.textContent = 'Маршрут от офиса СвязьТранзит';
+        hint.className = 'address-hint success';
+    }
     </script>
 }

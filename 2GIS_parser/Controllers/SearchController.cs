@@ -54,29 +54,26 @@ namespace _2GIS_parser.Controllers
 
             // Запускаем обогащение контактами в фоне (не ждём)
             var enrichPath = Path.Combine(Directory.GetCurrentDirectory(), "Parser", "enrich_contacts.py");
-            if (System.IO.File.Exists(enrichPath))
+            var enrichProcess = new Process
             {
-                var enrichProcess = new Process
+                StartInfo = new ProcessStartInfo
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = _pythonPath,
-                        Arguments = $"\"{enrichPath}\" \"{city}\" \"{query}\"",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    }
-                };
-                enrichProcess.Start();
-                // Намеренно не ждём — работает в фоне
-            }
+                    FileName = _pythonPath,
+                    Arguments = $"\"{enrichPath}\" {job.Id}",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Parser")
+                }
+            };
+            enrichProcess.Start();
             //TempData["Debug"] = $"OUT: {output} | ERR: {errors}";
 
             return RedirectToAction("Results", new { jobId = job.Id });
         }
 
-        public async Task<IActionResult> Results(int jobId, string? sortBy, string? filterCategory)
+        public async Task<IActionResult> Results(int jobId, string? sortBy, string? filterCategory, string? filterDistrict, int? officeId)
         {
             var job = await _db.ParseJobs.FindAsync(jobId);
             if (job == null) return NotFound();
@@ -92,6 +89,8 @@ namespace _2GIS_parser.Controllers
 
             if (!string.IsNullOrEmpty(filterCategory))
                 query2 = query2.Where(o => o.CategoryName == filterCategory);
+            if (!string.IsNullOrEmpty(filterDistrict))
+                query2 = query2.Where(o => o.District == filterDistrict);
 
             query2 = sortBy switch
             {
@@ -101,8 +100,29 @@ namespace _2GIS_parser.Controllers
                 _ => query2.OrderBy(o => o.Name)
             };
 
+            // Сортировка по удалённости — после основного запроса
             var organizations = await query2.ToListAsync();
 
+            if (sortBy == "distance" && officeId.HasValue)
+            {
+                var office = await _db.CompanyOffices.FindAsync(officeId.Value);
+                if (office != null)
+                {
+                    organizations = organizations
+                        .OrderBy(o => CalculateDistance(
+                            o.Latitude ?? 0, o.Longitude ?? 0,
+                            office.Latitude, office.Longitude))
+                        .ToList();
+                }
+            }
+            var districts = await _db.Organizations
+                .Where(o => orgIds.Contains(o.Id) && o.District != null)
+                .Select(o => o.District)
+                .Distinct()
+                .ToListAsync();
+
+            ViewBag.Districts = districts;
+            ViewBag.FilterDistrict = filterDistrict;
             var categories = await _db.Organizations
                 .Where(o => orgIds.Contains(o.Id))
                 .Select(o => o.CategoryName)
@@ -113,6 +133,10 @@ namespace _2GIS_parser.Controllers
             ViewBag.Categories = categories;
             ViewBag.SortBy = sortBy;
             ViewBag.FilterCategory = filterCategory;
+            ViewBag.OfficeId = officeId;
+
+            var offices = await _db.CompanyOffices.ToListAsync();
+            ViewBag.Offices = offices;
 
             return View(organizations);
         }
@@ -135,6 +159,17 @@ namespace _2GIS_parser.Controllers
                 .ToListAsync();
 
             return Json(contacts);
+        }
+
+        private static double CalculateDistance(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
+        {
+            const double R = 6371;
+            var dLat = ((double)(lat2 - lat1)) * Math.PI / 180;
+            var dLon = ((double)(lon2 - lon1)) * Math.PI / 180;
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos((double)lat1 * Math.PI / 180) * Math.Cos((double)lat2 * Math.PI / 180) *
+                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         }
     }
 }
