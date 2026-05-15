@@ -87,8 +87,6 @@ namespace _2GIS_parser.Controllers
                 .Include(o => o.Contacts)
                 .Where(o => orgIds.Contains(o.Id));
 
-            if (!string.IsNullOrEmpty(filterCategory))
-                query2 = query2.Where(o => o.CategoryName == filterCategory);
             if (!string.IsNullOrEmpty(filterDistrict))
                 query2 = query2.Where(o => o.District == filterDistrict);
 
@@ -123,16 +121,9 @@ namespace _2GIS_parser.Controllers
 
             ViewBag.Districts = districts;
             ViewBag.FilterDistrict = filterDistrict;
-            var categories = await _db.Organizations
-                .Where(o => orgIds.Contains(o.Id))
-                .Select(o => o.CategoryName)
-                .Distinct()
-                .ToListAsync();
 
             ViewBag.Job = job;
-            ViewBag.Categories = categories;
             ViewBag.SortBy = sortBy;
-            ViewBag.FilterCategory = filterCategory;
             ViewBag.OfficeId = officeId;
 
             var offices = await _db.CompanyOffices.ToListAsync();

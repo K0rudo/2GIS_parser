@@ -3,9 +3,7 @@ import pyodbc
 import sys
 import os
 import tempfile
-
-from parser_2gis.runner.cli import CLIRunner
-from parser_2gis.config import Configuration
+import subprocess
 
 conn_str = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
@@ -32,12 +30,6 @@ def get_connection():
     return pyodbc.connect(conn_str)
 
 
-def names_match(item_name: str, org_name: str) -> bool:
-    a = item_name.split(',')[0].strip().lower()
-    b = org_name.split(',')[0].strip().lower()
-    return a == b or a in b or b in a
-
-
 def save_contacts(cursor, org_id: int, item: dict):
     cursor.execute("DELETE FROM Contacts WHERE OrganizationId = ?", org_id)
     for group in item.get('contact_groups', []):
@@ -46,21 +38,23 @@ def save_contacts(cursor, org_id: int, item: dict):
             value = contact.get('url') or contact.get('value', '')
             if not value:
                 continue
+
+            if '?text=' in value:
+                value = value.split('?text=')[0]
+
             url_lower = value.lower()
             if ctype in ('website', 'extlink'):
                 if 't.me' in url_lower or 'telegram' in url_lower:
                     ctype = 'telegram'
                 elif 'wa.me' in url_lower or 'whatsapp' in url_lower:
                     ctype = 'whatsapp'
-                    # Убираем предзаполненное сообщение от 2ГИС
-                    if '?text=' in value:
-                        value = value.split('?text=')[0]
                 elif 'vk.com' in url_lower:
                     ctype = 'vk'
                 elif 'instagram.com' in url_lower:
                     ctype = 'instagram'
                 elif 'viber://' in url_lower:
                     ctype = 'viber'
+
             try:
                 cursor.execute(
                     "INSERT INTO Contacts (OrganizationId, ContactType, Value) VALUES (?, ?, ?)",
@@ -68,6 +62,46 @@ def save_contacts(cursor, org_id: int, item: dict):
                 )
             except Exception:
                 pass
+
+
+def parse_url(url, retries=2, timeout=60):
+    for attempt in range(retries):
+        out_file = tempfile.mktemp(suffix='.json')
+        proc = subprocess.Popen(
+            ['parser-2gis', '-i', url, '-f', 'json', '-o', out_file]
+        )
+        try:
+            proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            try:
+                os.remove(out_file)
+            except Exception:
+                pass
+            if attempt < retries - 1:
+                continue
+            return []
+
+        if not os.path.exists(out_file):
+            if attempt < retries - 1:
+                continue
+            return []
+
+        try:
+            with open(out_file, 'r', encoding='utf-8-sig') as f:
+                items = json.load(f)
+            try:
+                os.remove(out_file)
+            except Exception:
+                pass
+            return items
+        except Exception:
+            if attempt < retries - 1:
+                continue
+            return []
+
+    return []
 
 
 def enrich_contacts(job_id: int):
@@ -82,10 +116,10 @@ def enrich_contacts(job_id: int):
 
     city, search_query = job
     slug = CITY_SLUGS.get(city.lower(), city.lower())
-    url = f"https://2gis.ru/{slug}/search/{search_query.replace(' ', '%20')}"
 
+    # Берём организации с районом и ExternalId
     cursor.execute("""
-        SELECT o.Id, o.Name
+        SELECT o.Id, o.Name, o.ExternalId, o.District
         FROM Organizations o
         INNER JOIN ParseJobOrganizations pjo ON pjo.OrganizationId = o.Id
         WHERE pjo.ParseJobId = ?
@@ -96,57 +130,56 @@ def enrich_contacts(job_id: int):
         conn.close()
         return
 
-    org_lookup = {
-        name.split(',')[0].strip().lower(): (org_id, name)
-        for org_id, name in orgs
+    # Словарь ExternalId -> org_id
+    ext_lookup = {
+        external_id: org_id
+        for org_id, name, external_id, district in orgs
+        if external_id
     }
 
-    out_file = tempfile.mktemp(suffix='.json')
-    try:
-        config = Configuration()
-        runner = CLIRunner(
-            urls=[url],
-            output_path=out_file,
-            format='json',
-            config=config
-        )
-        runner.start()
-    except Exception:
-        conn.close()
-        return
+    # Группируем организации по районам
+    district_groups = {}
+    """no_district = []"""
 
-    if not os.path.exists(out_file):
-        conn.close()
-        return
+    for org_id, name, external_id, district in orgs:
+        if district:
+            if district not in district_groups:
+                district_groups[district] = []
+            district_groups[district].append((org_id, external_id))
+            """else:
+            no_district.append((org_id, external_id))"""
 
-    try:
-        with open(out_file, 'r', encoding='utf-8-sig') as f:
-            items = json.load(f)
-    except Exception:
-        conn.close()
-        return
+    # Для каждого района — отдельный поиск
+    for district, district_orgs in district_groups.items():
+        url = f"https://2gis.ru/{slug}/search/{search_query.replace(' ', '%20')}%20{district.replace(' ', '%20')}"
+        items = parse_url(url)
 
-    try:
-        os.remove(out_file)
-    except Exception:
-        pass
+        for item in items:
+            full_id = item.get('id', '')
+            ext_id = full_id.split('_')[0] if '_' in full_id else full_id
 
-    matched_ids = set()
-    for item in items:
-        item_name_key = item.get('name', '').split(',')[0].strip().lower()
-        matched_org = None
-        for key, (org_id, org_name) in org_lookup.items():
-            if org_id in matched_ids:
+            if ext_id not in ext_lookup:
                 continue
-            if names_match(item_name_key, key):
-                matched_org = (org_id, org_name)
-                break
-        if not matched_org:
-            continue
-        org_id, org_name = matched_org
-        matched_ids.add(org_id)
-        save_contacts(cursor, org_id, item)
-        conn.commit()
+
+            org_id = ext_lookup[ext_id]
+            save_contacts(cursor, org_id, item)
+            conn.commit()
+
+    """# Организации без района — общий поиск
+    if no_district:
+        url = f"https://2gis.ru/{slug}/search/{search_query.replace(' ', '%20')}"
+        items = parse_url(url)
+
+        for item in items:
+            full_id = item.get('id', '')
+            ext_id = full_id.split('_')[0] if '_' in full_id else full_id
+
+            if ext_id not in ext_lookup:
+                continue
+
+            org_id = ext_lookup[ext_id]
+            save_contacts(cursor, org_id, item)
+            conn.commit()"""
 
     conn.close()
 

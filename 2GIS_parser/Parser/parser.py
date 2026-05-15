@@ -75,8 +75,8 @@ def save_organization(cursor, item, city, job_id):
 
     # Рейтинг и отзывы
     reviews_data = item.get("reviews", {})
-    rating = reviews_data.get("org_rating", None)
-    reviews = reviews_data.get("org_review_count", None)
+    rating = reviews_data.get("general_rating", None)
+    reviews = reviews_data.get("general_review_count", None)
 
     # Координаты
     point = item.get("point", {})

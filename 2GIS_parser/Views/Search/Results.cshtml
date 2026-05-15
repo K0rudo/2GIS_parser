@@ -506,7 +506,6 @@
         <div>
             <h2>«@job?.SearchQuery» — @job?.City</h2>
             <div class="hero-meta">
-                <span class="status-badge status-@job?.Status">@job?.Status</span>
                 <span>Найдено: <strong style="color:#fff">@Model.Count</strong></span>
                 @if (job?.CompletedAt.HasValue == true)
                 {
@@ -541,13 +540,6 @@
                 }
             </select>
         }
-        <select name="filterCategory" class="form-select" id="catSelect" onchange="this.form.submit()">
-            <option value="">Все категории</option>
-            @foreach (var cat in categories)
-            {
-                <option value="@cat">@cat</option>
-            }
-        </select>
         <select name="filterDistrict" class="form-select" id="districtSelect" onchange="this.form.submit()">
             <option value="">Все районы</option>
             @foreach (var district in (ViewBag.Districts as List<string?> ?? new List<string?>()).Where(d => !string.IsNullOrEmpty(d)))
@@ -868,7 +860,6 @@
     });
 
     document.getElementById('sortSelect').value = '@sortBy';
-    document.getElementById('catSelect').value  = '@Html.Raw(filterCat)';
 
     function toggleDetails(btn) {
         const details = btn.nextElementSibling;
@@ -1049,7 +1040,6 @@
                 ${office.phone1 ? `<div style="margin-top:8px"><a href="tel:${office.phone1}" style="color:#DE2028;font-weight:600;text-decoration:none">📞 ${office.phone1}</a></div>` : ''}
                 ${office.phone2 ? `<div style="margin-top:4px"><a href="tel:${office.phone2}" style="color:#DE2028;font-weight:600;text-decoration:none">📞 ${office.phone2}</a></div>` : ''}
                 ${office.website ? `<div style="margin-top:4px"><a href="${office.website}" target="_blank" style="color:#3B455E;text-decoration:none">🌐 ${office.website}</a></div>` : ''}
-                ${office.hours ? `<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border-radius:8px;font-size:0.78rem;color:#475569">🕐 ${office.hours}</div>` : ''}
                 ${office.hours ? `<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border-radius:8px;font-size:0.78rem;color:#475569">🕐 ${office.hours}</div>` : ''}
                 <button onclick="setOfficeAsOrigin(${office.lon}, ${office.lat}); document.getElementById('office-popup').remove();"
                     style="margin-top:12px;width:100%;background:#DE2028;color:white;border:none;border-radius:8px;padding:8px;font-size:0.83rem;font-weight:700;cursor:pointer;font-family:inherit;">
