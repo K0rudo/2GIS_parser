@@ -165,7 +165,7 @@ def enrich_contacts(job_id: int):
             save_contacts(cursor, org_id, item)
             conn.commit()
 
-    """# Организации без района — общий поиск
+    """# Организации без района
     if no_district:
         url = f"https://2gis.ru/{slug}/search/{search_query.replace(' ', '%20')}"
         items = parse_url(url)

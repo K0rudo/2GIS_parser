@@ -17,7 +17,7 @@ namespace _2GIS_parser.Controllers
 
         public IActionResult Index()
         {
-            ViewData["Page"] = "search"; // ← добавить
+            ViewData["Page"] = "search";
             return View();
         }
 
@@ -52,7 +52,7 @@ namespace _2GIS_parser.Controllers
             //string errors = await process.StandardError.ReadToEndAsync();
             await process.WaitForExitAsync();
 
-            // Запускаем обогащение контактами в фоне (не ждём)
+            // Запускаем обогащение контактами в фоне
             var enrichPath = Path.Combine(Directory.GetCurrentDirectory(), "Parser", "enrich_contacts.py");
             var enrichProcess = new Process
             {
@@ -98,7 +98,7 @@ namespace _2GIS_parser.Controllers
                 _ => query2.OrderBy(o => o.Name)
             };
 
-            // Сортировка по удалённости — после основного запроса
+            // Сортировка по удалённости - после основного запроса
             var organizations = await query2.ToListAsync();
 
             if (sortBy == "distance" && officeId.HasValue)

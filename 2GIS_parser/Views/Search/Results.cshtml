@@ -7,7 +7,6 @@
     var sortBy      = ViewBag.SortBy as string ?? "";
     var filterCat   = ViewBag.FilterCategory as string ?? "";
 
-    // Serialize orgs with coords to JSON for Leaflet
     var orgsJson = System.Text.Json.JsonSerializer.Serialize(
         Model.Where(o => o.Latitude.HasValue && o.Longitude.HasValue)
              .Select(o => new {
@@ -715,7 +714,6 @@
     <script src="https://mapgl.2gis.com/api/js/v1"></script>
     <script src="https://unpkg.com/@@2gis/mapgl-directions@@2/dist/directions.js"></script>
     <script>
-    // ts-nocheck
     const orgs = @Html.Raw(orgsJson);
     const API_KEY = 'd18a4a4a-f927-44e1-82fc-77656e228906';
 
@@ -878,11 +876,10 @@
 
         const daysOrder = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-        // JS Date: 0=вс, 1=пн... приводим к нашему формату 0=пн
         const todayJs = new Date().getDay();
         const todayIdx = todayJs === 0 ? 6 : todayJs - 1;
 
-        // Парсим расписание
+        // Парс расписания
         const schedule = {};
         raw.split(',').forEach(part => {
             const m = part.trim().match(/^(Пн|Вт|Ср|Чт|Пт|Сб|Вс)\s+(.+)$/);
@@ -921,7 +918,7 @@
         container.innerHTML = html;
     }
 
-    // Рендерим часы для всех карточек, отрисованных Razor'ом
+    // Рендерим часы для всех карточек
     document.querySelectorAll('.hours-grid').forEach(renderHoursGrid);
 
     // ── Polling контактов ─────────────────────────────────

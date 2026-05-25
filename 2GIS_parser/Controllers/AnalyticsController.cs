@@ -39,7 +39,7 @@ namespace _2GIS_parser.Controllers
                 .ToListAsync();
 
             ViewBag.Districts = await _db.Organizations
-                .Where(o => o.District != null && o.District != "")
+                .Where(o => !string.IsNullOrEmpty(o.District))
                 .Select(o => o.District)
                 .Distinct()
                 .OrderBy(d => d)
@@ -117,7 +117,7 @@ namespace _2GIS_parser.Controllers
 
                 case "districts":
                     ViewBag.ByDistrict = orgs
-                        .Where(o => o.District != null)
+                        .Where(o => !string.IsNullOrEmpty(o.District)).ToList()
                         .GroupBy(o => o.District)
                         .Select(g => new {
                             District = g.Key,
@@ -130,7 +130,7 @@ namespace _2GIS_parser.Controllers
 
                 case "rating":
                     ViewBag.RatingByDistrict = orgs
-                        .Where(o => o.District != null && o.Rating.HasValue)
+                        .Where(o => !string.IsNullOrEmpty(o.District) && o.Rating.HasValue)
                         .GroupBy(o => o.District)
                         .Select(g => new {
                             District = g.Key,

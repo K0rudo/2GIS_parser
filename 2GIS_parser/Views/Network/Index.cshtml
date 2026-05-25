@@ -1,6 +1,30 @@
 ﻿@{
     ViewData["Title"] = "Маршрутизация";
     ViewData["Page"] = "network";
+
+    var nodes = ViewBag.Nodes as List<_2GIS_parser.Models.NetworkNode> ?? new List<_2GIS_parser.Models.NetworkNode>();
+    var links = ViewBag.Links as List<_2GIS_parser.Models.NetworkLink> ?? new List<_2GIS_parser.Models.NetworkLink>();
+
+    var nodesJson = System.Text.Json.JsonSerializer.Serialize(nodes.Select(n => new {
+        id          = n.Id,
+        name        = n.Name,
+        type        = n.NodeType,
+        lat         = (double)n.Latitude,
+        lon         = (double)n.Longitude,
+        address     = n.Address ?? "",
+        hardware    = n.Hardware.Select(h => new { name = h.HardwareName, type = h.HardwareType }).ToList(),
+        active      = n.IsActive,
+        connections = n.Connections
+    }));
+
+    var linksJson = System.Text.Json.JsonSerializer.Serialize(links.Select(l => new {
+        from      = l.FromNodeId,
+        to        = l.ToNodeId,
+        type      = l.LinkType,
+        waypoints = l.Waypoints.OrderBy(w => w.OrderIndex)
+                               .Select(w => new double[] { (double)w.Longitude, (double)w.Latitude })
+                               .ToList()
+    }));
 }
 
 <style>
@@ -123,159 +147,10 @@
 <script src="https://mapgl.2gis.com/api/js/v1"></script>
 <script>
 const API_KEY = '45cedc02-a92a-48d0-be46-142b310411b4';
-const nodes = [
-    { id:1,  name:'АТС Центральная',       type:'hub',    lat:52.286649, lon:104.27987, address:'ул. Дзержинского, 1',          hardware:'Cisco ASR 9000, Juniper MX480, Catalyst 6500', active:true,  connections:4 },
-    { id:2,  name:'Узел Кировский',         type:'switch', lat:52.2889,   lon:104.2832,  address:'ул. Рабочая, 2а/4',            hardware:'Cisco Catalyst 3850, Ubiquiti EdgeSwitch 48',  active:true,  connections:3 },
-    { id:3,  name:'Узел Свердловский',      type:'switch', lat:52.2703,   lon:104.2552,  address:'ул. Лермонтова, 78',           hardware:'Cisco Catalyst 2960, Mikrotik CRS326',         active:true,  connections:3 },
-    { id:4,  name:'Узел Октябрьский',       type:'switch', lat:52.2675,   lon:104.3099,  address:'ул. Байкальская, 105а',        hardware:'Cisco Catalyst 3650, Huawei S5720',            active:true,  connections:3 },
-    { id:5,  name:'Узел Куйбышевский',      type:'switch', lat:52.2800,   lon:104.3186,  address:'ул. Декабрьских Событий, 125', hardware:'Mikrotik CCR1036, Cisco Catalyst 2960',        active:true,  connections:2 },
-    { id:6,  name:'Клиент БЦ Сан-Рома',    type:'client', lat:52.2865,   lon:104.2728,  address:'ул. Степана Разина, 5',        hardware:'Ubiquiti UniFi AP, Mikrotik hEX',              active:true,  connections:1 },
-    { id:7,  name:'Клиент БЦ Ладога',      type:'client', lat:52.2800,   lon:104.3402,  address:'ул. Советская, 109',           hardware:'Cisco SG350, Ubiquiti UniFi AP-AC',            active:true,  connections:1 },
-    { id:8,  name:'Клиент БЦ Лисиха',      type:'client', lat:52.2575,   lon:104.3277,  address:'ул. Байкальская, 206',         hardware:'Mikrotik RB951, TP-Link TL-SG1024',            active:true,  connections:1 },
-    { id:9,  name:'Узел Академический',     type:'switch', lat:52.2341,   lon:104.2938,  address:'ул. Академическая, 26',        hardware:'Cisco Catalyst 3850, Juniper EX2300',          active:true,  connections:3 },
-    { id:10, name:'Клиент БЦ Офис-Байкал', type:'client', lat:52.2804,   lon:104.3084,  address:'ул. Карла Либкнехта, 94',      hardware:'Ubiquiti EdgeRouter, Cisco SG110',             active:true,  connections:1 },
-];
-const links = [
-    {
-        from:1, to:2, type:'fiber',
-        waypoints: [
-            [104.27987, 52.286649],
-            [104.280237, 52.2864],
-            [104.282059, 52.286815],
-            [104.282168, 52.288457],
-            [104.28327, 52.288505],
-            [104.2832, 52.2889]
-        ]
-    },
-    {
-        from:2, to:6, type:'copper',
-        waypoints: [
-            [104.2832, 52.2889],
-            [104.28327, 52.288505],
-            [104.282168, 52.288457],
-            [104.281731, 52.289545],
-            [104.275509, 52.288789], 
-            [104.27411, 52.288335], 
-            [104.271796, 52.286839], 
-            [104.272556, 52.28637],
-            [104.2728, 52.2865]
-        ]
-    },
-    {
-        from:1, to:3, type:'fiber',
-        waypoints: [
-            [104.27987, 52.286649],
-            [104.280237, 52.2864],
-            [104.280578, 52.285929], 
-            [104.280937, 52.282193], 
-            [104.279069, 52.281678], 
-            [104.277383, 52.283294], 
-            [104.271847, 52.286666], 
-            [104.260401, 52.28794], 
-            [104.25812, 52.28799], 
-            [104.257558, 52.287021], 
-            [104.259404, 52.281887], 
-            [104.25571, 52.279636], 
-            [104.257784, 52.275824], 
-            [104.253615, 52.274807], 
-            [104.255801, 52.270531],
-            [104.2552, 52.2703]
-        ]
-    },
-    {
-        from:4, to:5, type:'fiber',
-        waypoints: [
-            [104.3099, 52.2675],
-            [104.308933, 52.267148], 
-            [104.303478, 52.276348], 
-            [104.318837, 52.279108],
-            [104.3186, 52.2800]
-        ]
-    },
-    {
-        from:1, to:5, type:'fiber',
-        waypoints: [
-            [104.27987, 52.286649],
-            [104.280237, 52.2864],
-            [104.280578, 52.285929],
-            [104.280937, 52.282193],
-            [104.28246, 52.279998], 
-            [104.294778, 52.29024], 
-            [104.317943, 52.279533],
-            [104.3186, 52.2800]
-        ]
-    },
-    {
-        from:9, to:1, type:'fiber',
-        waypoints: [
-            [104.2938, 52.2341],
-            [104.294219, 52.235242], 
-            [104.293911, 52.237187], 
-            [104.292823, 52.238038], 
-            [104.286957, 52.239935], 
-            [104.282228, 52.242773], 
-            [104.274504, 52.254707], 
-            [104.292318, 52.26737], 
-            [104.293305, 52.268278], 
-            [104.293527, 52.269237], 
-            [104.29281, 52.270349], 
-            [104.285829, 52.276154],
-            [104.28246, 52.279998],
-            [104.280937, 52.282193],
-            [104.280578, 52.285929],
-            [104.280237, 52.2864],
-            [104.27987, 52.286649]
-        ]
-    },
-    {
-        from:3, to:9, type:'fiber',
-        waypoints: [
-            [104.2552, 52.2703], 
-            [104.255801, 52.270531],
-            [104.262599, 52.257254], 
-            [104.263599, 52.254587], 
-            [104.270891, 52.254115],
-            [104.274504, 52.254707], 
-            [104.282228, 52.242773],
-            [104.286957, 52.239935],
-            [104.292823, 52.238038],
-            [104.293911, 52.237187],
-            [104.294219, 52.235242],
-            [104.2938, 52.2341]
-        ]
-    },
-    {
-        from:5, to:10, type:'copper',
-        waypoints: [
-            [104.3186, 52.2800],
-            [104.318837, 52.279108],
-            [104.309164, 52.277452], 
-            [104.307615, 52.279628],
-            [104.30769, 52.279896],
-            [104.3084, 52.2804]
-        ]
-    },
-    {
-        from:5, to:7, type:'copper',
-        waypoints: [
-            [104.3186, 52.2800],
-            [104.318837, 52.279108],
-            [104.323702, 52.279963], 
-            [104.340198, 52.279783],
-            [104.3402, 52.2800]
-        ]
-    },
-    {
-        from:4, to:8, type:'copper',
-        waypoints: [
-            [104.3099, 52.2675],
-            [104.308933, 52.267148],
-            [104.310662, 52.264281], 
-            [104.327848, 52.257824],
-            [104.3277, 52.2575]
-        ]
-    },
-];
+
+const nodes = @Html.Raw(nodesJson);
+const links = @Html.Raw(linksJson);
+
 const nodeColors = { hub:'#DE2028', switch:'#3B455E', client:'#59A8DD' };
 const nodeLabels = { hub:'Главный узел (АТС)', switch:'Коммутационный узел', client:'Клиентский узел' };
 
@@ -357,7 +232,7 @@ function showPopupByNode(nodeId) {
     document.getElementById('popup-name').textContent        = node.name;
     document.getElementById('popup-type').textContent        = nodeLabels[node.type];
     document.getElementById('popup-address').textContent     = node.address;
-    document.getElementById('popup-hardware').textContent    = node.hardware;
+    document.getElementById('popup-hardware').textContent = node.hardware.map(h => h.name).join(', ');
     document.getElementById('popup-connections').textContent = node.connections + ' соединений';
     document.getElementById('popup-status').textContent = node.active ? 'Активен' : 'Неактивен';
     document.getElementById('node-popup').style.display = 'block';
