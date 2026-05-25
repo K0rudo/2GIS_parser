@@ -11,7 +11,7 @@ conn_str = (
     "Trusted_Connection=yes;"
 )
 
-API_KEY = "d18a4a4a-f927-44e1-82fc-77656e228906"
+API_KEY = "45cedc02-a92a-48d0-be46-142b310411b4"
 
 
 def get_connection():

@@ -2,352 +2,525 @@
     ViewData["Title"] = "Аналитика";
     ViewData["Page"] = "analytics";
 
-    var totalOrgs = (int)(ViewBag.TotalOrgs ?? 0);
-    var totalJobs = (int)(ViewBag.TotalJobs ?? 0);
+    var totalOrgs        = (int)(ViewBag.TotalOrgs ?? 0);
     var orgsWithContacts = (int)(ViewBag.OrgsWithContacts ?? 0);
-    var avgRating = (double)(ViewBag.AvgRating ?? 0.0);
-    var contactCoverage = totalOrgs > 0 ? (int)((double)orgsWithContacts / totalOrgs * 100) : 0;
+    var avgRating        = (double)(ViewBag.AvgRating ?? 0.0);
+    var contactCoverage  = (int)(ViewBag.ContactCoverage ?? 0);
+    var analyticsType    = ViewBag.AnalyticsType as string ?? "overview";
+    var filterCity       = ViewBag.FilterCity as string ?? "";
+    var filterCategory   = ViewBag.FilterCategory as string ?? "";
+    var filterDistrict   = ViewBag.FilterDistrict as string ?? "";
+
+    var cities     = ViewBag.Cities as List<string?> ?? new List<string?>();
+    var categories = ViewBag.Categories as List<string?> ?? new List<string?>();
+    var districts  = ViewBag.Districts as List<string?> ?? new List<string?>();
 }
 
 <style>
-    .analytics-hero {
-        background: linear-gradient(135deg, #3B455E 0%, #81414D 50%, #DE2028 100%);
-        padding: 28px 28px;
-        color: white;
-    }
-
-    .analytics-hero h2 {
-        font-size: 1.35rem;
-        font-weight: 700;
-        margin: 0;
-    }
-
-    .analytics-body {
-        padding: 24px;
-        background: #f0f3f8;
-        min-height: calc(100vh - 68px - 80px);
-    }
-
-    /* Метрики */
-    .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
-        margin-bottom: 24px;
-    }
-
-    .metric-card {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 1px 4px rgba(59,69,94,0.08);
-        text-align: center;
-    }
-
-    .metric-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #DE2028;
-        line-height: 1;
-        margin-bottom: 6px;
-    }
-
-    .metric-label {
-        font-size: 0.78rem;
-        color: #64748b;
-        font-weight: 500;
-    }
-
-    /* Секции */
-    .analytics-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        margin-bottom: 16px;
-    }
-
-    .analytics-card {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 1px 4px rgba(59,69,94,0.08);
-    }
-
-    .analytics-card h3 {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #1a2236;
-        margin: 0 0 16px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #f0f4f8;
-    }
-
-    /* Бар */
-    .bar-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
-        font-size: 0.8rem;
-    }
-
-    .bar-label {
-        width: 160px;
-        color: #334155;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        flex-shrink: 0;
-    }
-
-    .bar-track {
-        flex: 1;
-        background: #f0f4f8;
-        border-radius: 6px;
-        height: 8px;
-        overflow: hidden;
-    }
-
-    .bar-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #DE2028, #81414D);
-        border-radius: 6px;
-    }
-
-    .bar-count {
-        color: #64748b;
-        font-weight: 600;
-        width: 28px;
-        text-align: right;
-        flex-shrink: 0;
-    }
-
-    /* История поисков */
-    .jobs-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.8rem;
-    }
-
-    .jobs-table th {
-        text-align: left;
-        padding: 6px 8px;
-        color: #94a3b8;
-        font-weight: 600;
-        font-size: 0.72rem;
-        text-transform: uppercase;
-        border-bottom: 1px solid #f0f4f8;
-    }
-
-    .jobs-table td {
-        padding: 8px;
-        color: #334155;
-        border-bottom: 1px solid #f8fafc;
-    }
-
-    .jobs-table tr:last-child td {
-        border-bottom: none;
-    }
-
-    .status-badge {
-        padding: 2px 8px;
-        border-radius: 20px;
-        font-size: 0.7rem;
-        font-weight: 700;
-    }
-
-    .status-Completed { background: rgba(34,197,94,0.12); color: #16a34a; }
-    .status-Running   { background: rgba(251,191,36,0.12); color: #d97706; }
-    .status-Failed    { background: rgba(239,68,68,0.12);  color: #dc2626; }
-
-    /* Прогресс-бар покрытия */
-    .coverage-bar {
-        background: #f0f4f8;
-        border-radius: 8px;
-        height: 12px;
-        overflow: hidden;
-        margin-top: 8px;
-    }
-
-    .coverage-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #16a34a, #22c55e);
-        border-radius: 8px;
-        transition: width 0.5s;
-    }
-
-    /* Экспорт */
-    .export-card {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 1px 4px rgba(59,69,94,0.08);
-        margin-bottom: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-    }
-
-    .export-card h3 {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: #1a2236;
-        margin: 0 0 4px;
-    }
-
-    .export-card p {
-        font-size: 0.8rem;
-        color: #64748b;
-        margin: 0;
-    }
-
-    .btn-export {
-        background: #DE2028;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 20px;
-        font-size: 0.83rem;
-        font-weight: 700;
-        cursor: pointer;
-        font-family: inherit;
-        text-decoration: none;
-        white-space: nowrap;
-        transition: background 0.18s;
-    }
-
-    .btn-export:hover {
-        background: #b51920;
-        color: white;
-        text-decoration: none;
-    }
+    .analytics-hero { background: linear-gradient(135deg, #3B455E 0%, #81414D 50%, #DE2028 100%); padding: 22px 28px; color: white; }
+    .analytics-hero h2 { font-size: 1.35rem; font-weight: 700; margin: 0; }
+    .analytics-body { padding: 20px 24px; background: #f0f3f8; min-height: calc(100vh - 68px - 80px); }
+    .control-bar { background: white; border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(59,69,94,0.08); display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+    .control-group { display: flex; flex-direction: column; gap: 5px; }
+    .control-group label { font-size: 0.72rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .control-group select { border: 1.5px solid #e8ecf4; border-radius: 8px; font-size: 0.83rem; padding: 7px 12px; font-family: inherit; outline: none; background: white; min-width: 160px; color: #334155; }
+    .control-group select:focus { border-color: #DE2028; }
+    .btn-apply { background: #DE2028; color: white; border: none; border-radius: 8px; padding: 8px 20px; font-size: 0.83rem; font-weight: 700; cursor: pointer; font-family: inherit; align-self: flex-end; }
+    .btn-reset { background: none; color: #94a3b8; border: 1.5px solid #e8ecf4; border-radius: 8px; padding: 8px 14px; font-size: 0.83rem; cursor: pointer; font-family: inherit; text-decoration: none; align-self: flex-end; }
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+    .metric-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(59,69,94,0.08); text-align: center; }
+    .metric-value { font-size: 2rem; font-weight: 700; color: #DE2028; line-height: 1; margin-bottom: 6px; }
+    .metric-label { font-size: 0.76rem; color: #64748b; font-weight: 500; }
+    .analytics-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(59,69,94,0.08); margin-bottom: 16px; }
+    .analytics-card h3 { font-size: 0.85rem; font-weight: 700; color: #1a2236; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid #f0f4f8; }
+    .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 0.79rem; }
+    .bar-label { width: 160px; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .bar-track { flex: 1; background: #f0f4f8; border-radius: 6px; height: 8px; overflow: hidden; }
+    .bar-fill { height: 100%; background: linear-gradient(90deg, #DE2028, #81414D); border-radius: 6px; }
+    .bar-pct { color: #64748b; font-weight: 600; width: 52px; text-align: right; flex-shrink: 0; font-size: 0.75rem; }
+    .orgs-table { width: 100%; border-collapse: collapse; font-size: 0.79rem; }
+    .orgs-table th { text-align: left; padding: 7px 10px; color: #94a3b8; font-weight: 600; font-size: 0.71rem; text-transform: uppercase; border-bottom: 1px solid #f0f4f8; }
+    .orgs-table td { padding: 8px 10px; color: #334155; border-bottom: 1px solid #f8fafc; }
+    .orgs-table tr:last-child td { border-bottom: none; }
+    .dot-yes { color: #16a34a; font-weight: 700; }
+    .dot-no  { color: #cbd5e1; }
+    .coverage-bar { background: #f0f4f8; border-radius: 8px; height: 12px; overflow: hidden; margin-top: 8px; }
+    .coverage-fill { height: 100%; background: linear-gradient(90deg, #16a34a, #22c55e); border-radius: 8px; }
+    .export-card { background: white; border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(59,69,94,0.08); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .export-card h3 { font-size: 0.88rem; font-weight: 700; color: #1a2236; margin: 0 0 3px; }
+    .export-card p  { font-size: 0.78rem; color: #64748b; margin: 0; }
+    .btn-export { background: #DE2028; color: white; border: none; border-radius: 8px; padding: 8px 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; font-family: inherit; text-decoration: none; white-space: nowrap; }
+    .btn-export:hover { background: #b51920; color: white; text-decoration: none; }
+    .badge-miss { background: rgba(222,32,40,0.08); color: #DE2028; border-radius: 6px; padding: 2px 7px; font-size: 0.7rem; font-weight: 600; margin-right: 4px; }
+    .no-data { color: #94a3b8; font-size: 0.82rem; }
+    .hint-box { background: #f8fafc; border-radius: 8px; padding: 20px; color: #94a3b8; font-size: 0.82rem; text-align: center; }
 </style>
 
-<!-- Hero -->
-<div class="analytics-hero">
+<div class="analytics-hero" style="display:flex;align-items:center;justify-content:space-between">
     <h2>📊 Аналитика и отчёты</h2>
+    <button onclick="document.getElementById('export-modal').style.display='flex'"
+        style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;border-radius:8px;padding:7px 16px;font-size:0.83rem;font-weight:700;cursor:pointer;font-family:inherit">
+        📥 Скачать CSV
+    </button>
 </div>
 
 <div class="analytics-body">
 
-    <!-- Метрики -->
-    <div class="metrics-grid">
-        <div class="metric-card">
-            <div class="metric-value">@totalOrgs</div>
-            <div class="metric-label">Организаций в базе</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value">@totalJobs</div>
-            <div class="metric-label">Поисков выполнено</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value">@avgRating.ToString("F1")</div>
-            <div class="metric-label">Средний рейтинг</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value">@contactCoverage%</div>
-            <div class="metric-label">Организаций с контактами</div>
-        </div>
-    </div>
+    <form method="get" class="control-bar">
 
-    <!-- Экспорт -->
-    <div class="export-card">
-        <div>
-            <h3>📥 Экспорт данных</h3>
-            <p>Выгрузить все организации из базы данных в формате CSV</p>
-        </div>
-        <a href="/Analytics/Export" class="btn-export">Скачать CSV</a>
-    </div>
-
-    <!-- Графики -->
-    <div class="analytics-grid">
-
-        <!-- Топ категорий -->
-        <div class="analytics-card">
-            <h3>🏷️ Топ категорий</h3>
-            @{
-                var topCats = ViewBag.TopCategories as System.Collections.IList;
-                var maxCat = 1;
-                if (topCats != null && topCats.Count > 0)
+        <div class="control-group">
+            <label>Раздел аналитики</label>
+            <select name="analyticsType" onchange="window.location.href='/Analytics?analyticsType='+this.value">
+                @{ var types = new[] { ("overview","Общие данные"), ("contacts","Покрытие контактами организаций"), ("districts","Покрытие контактами по районам"), ("rating","Рейтинг по районам"), ("top","Топ организаций"), ("categories","Сравнение категорий")}; }
+                @foreach (var (val, label) in types)
                 {
-                    foreach (var item in topCats)
+                    if (analyticsType == val) { <option value="@val" selected>@label</option> }
+                    else                      { <option value="@val">@label</option> }
+                }
+            </select>
+        </div>
+
+        @if (analyticsType == "overview" || analyticsType == "districts" || analyticsType == "rating" || analyticsType == "top")
+        {
+            <div class="control-group">
+                <label>Город</label>
+                <select name="filterCity">
+                    @if (string.IsNullOrEmpty(filterCity))
                     {
-                        var cnt = (int)item.GetType().GetProperty("Count").GetValue(item);
-                        if (cnt > maxCat) maxCat = cnt;
+                        <option value="" disabled selected>Выберите город</option>
                     }
-                }
-            }
-            @if (topCats != null && topCats.Count > 0)
+                    else
+                    {
+                        <option value="" disabled>Выберите город</option>
+                    }
+                    @foreach (var c in cities)
+                    {
+                        if (filterCity == c) { <option value="@c" selected>@c</option> }
+                        else                 { <option value="@c">@c</option> }
+                    }
+                </select>
+            </div>
+        }
+
+        @if (analyticsType == "contacts" || analyticsType == "rating" || analyticsType == "districts" || analyticsType == "top" || analyticsType == "categories")
+        {
+            <div class="control-group">
+                <label>Категория</label>
+                <select name="filterCategory">
+                    <option value="">Все категории</option>
+                    @foreach (var c in categories)
+                    {
+                        if (filterCategory == c) { <option value="@c" selected>@c</option> }
+                        else                     { <option value="@c">@c</option> }
+                    }
+                </select>
+            </div>
+        }
+
+        @if (analyticsType == "contacts")
+        {
+            <div class="control-group">
+                <label>Район</label>
+                <select name="filterDistrict">
+                    <option value="">Все районы</option>
+                    @foreach (var d in districts)
+                    {
+                        if (filterDistrict == d) { <option value="@d" selected>@d</option> }
+                        else                     { <option value="@d">@d</option> }
+                    }
+                </select>
+            </div>
+        }
+
+        <button type="submit" class="btn-apply">Применить</button>
+        <input type="hidden" name="applied" value="true" />
+        <a href="/Analytics?analyticsType=@analyticsType" class="btn-reset">Сбросить</a>
+
+    </form>
+
+    <!-- Метрики -->
+    @if ((bool)(ViewBag.Applied ?? false))
+    {
+        <div class="metrics-grid">
+            <div class="metric-card"><div class="metric-value">@totalOrgs</div><div class="metric-label">Организаций</div></div>
+            <div class="metric-card"><div class="metric-value">@orgsWithContacts</div><div class="metric-label">С контактами</div></div>
+            <div class="metric-card"><div class="metric-value">@avgRating.ToString("F1")</div><div class="metric-label">Средний рейтинг</div></div>
+            <div class="metric-card"><div class="metric-value">@contactCoverage%</div><div class="metric-label">Покрытие контактами</div></div>
+        </div>
+    }
+    @if ((bool)(ViewBag.Applied ?? false))
+    {
+
+        @if (analyticsType == "overview")
+        {
+            if (string.IsNullOrEmpty(filterCity))
             {
-                foreach (var item in topCats)
-                {
-                    var cat   = (string?)item.GetType().GetProperty("Category").GetValue(item) ?? "—";
-                    var count = (int)item.GetType().GetProperty("Count").GetValue(item);
-                    var pct   = (int)((double)count / maxCat * 100);
-                    <div class="bar-row">
-                        <div class="bar-label" title="@cat">@cat</div>
-                        <div class="bar-track">
-                            <div class="bar-fill" style="width:@pct%"></div>
-                        </div>
-                        <div class="bar-count">@count</div>
-                    </div>
-                }
+                <div class="hint-box">Выберите город для отображения аналитики</div>
             }
             else
             {
-                <p style="color:#94a3b8;font-size:0.82rem">Нет данных</p>
-            }
-        </div>
-
-        <!-- По районам -->
-        <div class="analytics-card">
-            <h3>🏙️ По районам</h3>
-            @{
-                var byDistrict = ViewBag.ByDistrict as System.Collections.IList;
+                var byDist = ViewBag.ByDistrict as System.Collections.IList;
                 var maxDist = 1;
-                if (byDistrict != null && byDistrict.Count > 0)
-                {
-                    foreach (var item in byDistrict)
+                if (byDist != null)
+                    foreach (var item in byDist)
                     {
                         var cnt = (int)item.GetType().GetProperty("Count").GetValue(item);
                         if (cnt > maxDist) maxDist = cnt;
                     }
-                }
-            }
-            @if (byDistrict != null && byDistrict.Count > 0)
-            {
-                foreach (var item in byDistrict)
-                {
-                    var dist  = (string?)item.GetType().GetProperty("District").GetValue(item) ?? "—";
-                    var count = (int)item.GetType().GetProperty("Count").GetValue(item);
-                    var pct   = (int)((double)count / maxDist * 100);
-                    <div class="bar-row">
-                        <div class="bar-label" title="@dist">@dist</div>
-                        <div class="bar-track">
-                            <div class="bar-fill" style="width:@pct%"></div>
-                        </div>
-                        <div class="bar-count">@count</div>
+
+                <div class="analytics-grid">
+                    <div class="analytics-card" style="margin-bottom:0">
+                        <h3>🏙️ По районам</h3>
+                        @if (byDist != null && byDist.Count > 0)
+                        {
+                            foreach (var item in byDist)
+                            {
+                                var dist  = (string?)item.GetType().GetProperty("District").GetValue(item) ?? "—";
+                                var count = (int)item.GetType().GetProperty("Count").GetValue(item);
+                                var pct   = (int)((double)count / maxDist * 100);
+                                var pctT  = totalOrgs > 0 ? (int)((double)count / totalOrgs * 100) : 0;
+                                <div class="bar-row">
+                                    <div class="bar-label" title="@dist">@dist</div>
+                                    <div class="bar-track"><div class="bar-fill" style="width:@pct%"></div></div>
+                                    <div class="bar-pct">@count (@pctT%)</div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <p class="no-data">Нет данных</p>
+                        }
                     </div>
-                }
+                    <div class="analytics-card" style="margin-bottom:0">
+                        <h3>📊 Покрытие контактами</h3>
+                        <div style="font-size:0.83rem;color:#475569;margin-bottom:8px">@orgsWithContacts из @totalOrgs имеют контакты (@contactCoverage%)</div>
+                        <div class="coverage-bar"><div class="coverage-fill" style="width:@contactCoverage%"></div></div>
+                        <div style="margin-top:16px;font-size:0.79rem;color:#64748b">Средний рейтинг: <strong style="color:#DE2028">@avgRating.ToString("F1")</strong></div>
+                    </div>
+                </div>
+            }
+        }
+
+        @if (analyticsType == "contacts")
+        {
+            var orgContacts = ViewBag.OrgContacts as System.Collections.IList;
+            if (string.IsNullOrEmpty(filterCategory) && string.IsNullOrEmpty(filterDistrict))
+            {
+                <div class="hint-box">Выберите категорию и/или район для отображения организаций</div>
+            }
+            else if (orgContacts == null || orgContacts.Count == 0)
+            {
+                <div class="hint-box">По выбранным фильтрам организации не найдены</div>
             }
             else
             {
-                <p style="color:#94a3b8;font-size:0.82rem">Нет данных</p>
+                <div class="analytics-card">
+                    <h3>📇 Контакты организаций — @orgContacts.Count орг.</h3>
+                    <table class="orgs-table">
+                        <thead><tr><th>Название</th><th>Адрес</th><th>Телефон</th><th>Сайт</th><th>Email</th><th>TG</th><th>WA</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in orgContacts)
+                        {
+                            var t           = item.GetType();
+                            var name        = (string)t.GetProperty("Name").GetValue(item);
+                            var address     = (string)t.GetProperty("Address").GetValue(item);
+                            var hasPhone    = (bool)t.GetProperty("HasPhone").GetValue(item);
+                            var hasSite     = (bool)t.GetProperty("HasSite").GetValue(item);
+                            var hasEmail    = (bool)t.GetProperty("HasEmail").GetValue(item);
+                            var hasTelegram = (bool)t.GetProperty("HasTelegram").GetValue(item);
+                            var hasWhatsApp = (bool)t.GetProperty("HasWhatsApp").GetValue(item);
+                            var phone       = (string)t.GetProperty("Phone").GetValue(item);
+                            <tr>
+                                <td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@name</td>
+                                <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b">@address</td>
+                                <td style="font-size:0.78rem;color:#16a34a">@(hasPhone ? phone : "—")</td>
+                                <td><span class="@(hasSite ? "dot-yes" : "dot-no")">@(hasSite ? "✓" : "—")</span></td>
+                                <td><span class="@(hasEmail ? "dot-yes" : "dot-no")">@(hasEmail ? "✓" : "—")</span></td>
+                                <td><span class="@(hasTelegram ? "dot-yes" : "dot-no")">@(hasTelegram ? "✓" : "—")</span></td>
+                                <td><span class="@(hasWhatsApp ? "dot-yes" : "dot-no")">@(hasWhatsApp ? "✓" : "—")</span></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
             }
-        </div>
+        }
 
+        @if (analyticsType == "districts")
+        {
+            if (string.IsNullOrEmpty(filterCity))
+            {
+                <div class="hint-box">Выберите город для отображения данных по районам</div>
+            }
+            else
+            {
+                var byDist2 = ViewBag.ByDistrict as System.Collections.IList;
+                var maxDist2 = 1;
+                if (byDist2 != null)
+                    foreach (var item in byDist2)
+                    {
+                        var cnt = (int)item.GetType().GetProperty("Count").GetValue(item);
+                        if (cnt > maxDist2) maxDist2 = cnt;
+                    }
+
+                <div class="analytics-card">
+                    <h3>🏙️ Распределение по районам — @filterCity</h3>
+                    @if (byDist2 != null && byDist2.Count > 0)
+                    {
+                        foreach (var item in byDist2)
+                        {
+                            var dist         = (string?)item.GetType().GetProperty("District").GetValue(item) ?? "—";
+                            var count        = (int)item.GetType().GetProperty("Count").GetValue(item);
+                            var withContacts = (int)item.GetType().GetProperty("WithContacts").GetValue(item);
+                            var pct          = (int)((double)count / maxDist2 * 100);
+                            var pctT         = totalOrgs > 0 ? (int)((double)count / totalOrgs * 100) : 0;
+                            var contactPct   = count > 0 ? (int)((double)withContacts / count * 100) : 0;
+                            <div style="margin-bottom:14px">
+                                <div class="bar-row" style="margin-bottom:4px">
+                                    <div class="bar-label" title="@dist" style="font-weight:600;color:#1a2236">@dist</div>
+                                    <div class="bar-track"><div class="bar-fill" style="width:@pct%"></div></div>
+                                    <div class="bar-pct">@count (@pctT%)</div>
+                                </div>
+                                <div style="padding-left:170px;font-size:0.75rem;color:#64748b">
+                                    С контактами: <span style="color:#16a34a;font-weight:600">@withContacts из @count (@contactPct%)</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="no-data">Нет данных</p>
+                    }
+                </div>
+            }
+        }
+
+        @if (analyticsType == "rating")
+        {
+            if (string.IsNullOrEmpty(filterCity))
+            {
+                <div class="hint-box">Выберите город для отображения рейтинга</div>
+            }
+            else
+            {
+                var ratingByDist = ViewBag.RatingByDistrict as System.Collections.IList;
+
+                <div class="analytics-card">
+                    <h3>⭐ Средний рейтинг по районам — @filterCity</h3>
+                    @if (ratingByDist != null && ratingByDist.Count > 0)
+                    {
+                        foreach (var item in ratingByDist)
+                        {
+                            var t    = item.GetType();
+                            var dist = (string?)t.GetProperty("District").GetValue(item) ?? "—";
+                            var avg  = (double)t.GetProperty("AvgRating").GetValue(item);
+                            var pct  = (int)(avg / 5.0 * 100);
+                            <div class="bar-row">
+                                <div class="bar-label" title="@dist">@dist</div>
+                                <div class="bar-track"><div class="bar-fill" style="width:@pct%"></div></div>
+                                <div class="bar-pct">@avg.ToString("F1") ⭐</div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="no-data">Нет данных</p>
+                    }
+                </div>
+            }
+        }
+        @if (analyticsType == "top")
+        {
+            var topOrgs = ViewBag.TopOrgs as System.Collections.IList;
+            if (topOrgs == null || topOrgs.Count == 0)
+            {
+                <div class="hint-box">Нет данных по выбранным фильтрам</div>
+            }
+            else
+            {
+                <div class="analytics-card">
+                    <h3>🏆 Топ организаций по рейтингу</h3>
+                    <table class="orgs-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Название</th>
+                                <th>Категория</th>
+                                <th>Район</th>
+                                <th>Рейтинг</th>
+                                <th>Отзывов</th>
+                                <th>Контакты</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @{var rank = 1;}
+                        @foreach (var item in topOrgs)
+                        {
+                            var t           = item.GetType();
+                            var name        = (string)t.GetProperty("Name").GetValue(item);
+                            var address     = (string)t.GetProperty("Address").GetValue(item);
+                            var category    = (string)t.GetProperty("Category").GetValue(item);
+                            var district    = (string)t.GetProperty("District").GetValue(item);
+                            var rating      = (double)t.GetProperty("Rating").GetValue(item);
+                            var reviews     = (int)t.GetProperty("Reviews").GetValue(item);
+                            var hasContacts = (bool)t.GetProperty("HasContacts").GetValue(item);
+                            <tr>
+                                <td style="color:#94a3b8;font-weight:700">@rank</td>
+                                <td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@name</td>
+                                <td style="color:#64748b;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@category</td>
+                                <td style="color:#64748b">@district</td>
+                                <td style="color:#DE2028;font-weight:700">@rating.ToString("F1") ⭐</td>
+                                <td style="color:#64748b">@reviews</td>
+                                <td><span class="@(hasContacts ? "dot-yes" : "dot-no")">@(hasContacts ? "✓" : "—")</span></td>
+                            </tr>
+                            rank++;
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+
+        @if (analyticsType == "categories")
+        {
+            var catsStats = ViewBag.CategoriesStats as System.Collections.IList;
+            if (catsStats == null || catsStats.Count == 0)
+            {
+                <div class="hint-box">Нет данных</div>
+            }
+            else
+            {
+                var maxCount = 1;
+                foreach (var item in catsStats)
+                {
+                    var cnt = (int)item.GetType().GetProperty("Count").GetValue(item);
+                    if (cnt > maxCount) maxCount = cnt;
+                }
+
+                <div class="analytics-card">
+                    <h3>📊 Сравнение категорий</h3>
+                    <table class="orgs-table">
+                        <thead>
+                            <tr>
+                                <th>Категория</th>
+                                <th>Кол-во</th>
+                                <th>Средний рейтинг</th>
+                                <th>С контактами</th>
+                                <th>Отзывов всего</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in catsStats)
+                        {
+                            var t            = item.GetType();
+                            var cat          = (string?)t.GetProperty("Category").GetValue(item) ?? "—";
+                            var count        = (int)t.GetProperty("Count").GetValue(item);
+                            var avgRat       = (double)t.GetProperty("AvgRating").GetValue(item);
+                            var withContacts = (int)t.GetProperty("WithContacts").GetValue(item);
+                            var totalReviews = (int)t.GetProperty("TotalReviews").GetValue(item);
+                            var contactPct   = count > 0 ? (int)((double)withContacts / count * 100) : 0;
+                            <tr>
+                                <td style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@cat</td>
+                                <td>@count</td>
+                                <td style="color:#DE2028;font-weight:700">@avgRat.ToString("F1") ⭐</td>
+                                <td><span style="color:#16a34a;font-weight:600">@withContacts (@contactPct%)</span></td>
+                                <td style="color:#64748b">@totalReviews</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+    }
+    else
+    {
+        <div class="hint-box">Выберите параметры и нажмите «Применить»</div>
+    }
+    <!-- Модальное окно экспорта -->
+    <div id="export-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;align-items:center;justify-content:center">
+        <div style="background:white;border-radius:14px;padding:24px;width:480px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,0.18)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+                <div style="font-size:1rem;font-weight:700;color:#1a2236">📥 Настройка экспорта CSV</div>
+                <button onclick="document.getElementById('export-modal').style.display='none'"
+                    style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#94a3b8">✕</button>
+            </div>
+
+            <form action="/Analytics/Export" method="get">
+                <div style="font-size:0.75rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px">Поля для экспорта</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px">
+                    @{
+                        var exportFields = new[] {
+                            ("name",     "Название"),
+                            ("city",     "Город"),
+                            ("address",  "Адрес"),
+                            ("category", "Категория"),
+                            ("district", "Район"),
+                            ("rating",   "Рейтинг"),
+                            ("reviews",  "Количество отзывов"),
+                            ("phones",   "Телефоны"),
+                            ("website",  "Сайт"),
+                            ("email",    "Email"),
+                            ("telegram", "Telegram"),
+                            ("whatsapp", "WhatsApp"),
+                        };
+                    }
+                    @foreach (var (val, label) in exportFields)
+                    {
+                        <label style="display:flex;align-items:center;gap:8px;font-size:0.83rem;color:#334155;cursor:pointer;padding:6px 10px;border:1.5px solid #e8ecf4;border-radius:8px">
+                            <input type="checkbox" name="fieldList" value="@val" checked style="accent-color:#DE2028">
+                            @label
+                        </label>
+                    }
+                </div>
+
+                <div style="font-size:0.75rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px">Фильтр данных</div>
+                <div style="display:flex;gap:10px;margin-bottom:18px">
+                    <select name="filterCity" style="flex:1;border:1.5px solid #e8ecf4;border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.82rem">
+                        <option value="">Все города</option>
+                        @foreach (var c in cities)
+                        {
+                            <option value="@c">@c</option>
+                        }
+                    </select>
+                    <select name="filterCategory" style="flex:1;border:1.5px solid #e8ecf4;border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.82rem">
+                        <option value="">Все категории</option>
+                        @foreach (var c in categories)
+                        {
+                            <option value="@c">@c</option>
+                        }
+                    </select>
+                </div>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end">
+                    <button type="button" onclick="document.getElementById('export-modal').style.display='none'"
+                        style="background:none;border:1.5px solid #e8ecf4;border-radius:8px;padding:8px 18px;font-size:0.83rem;cursor:pointer;font-family:inherit;color:#64748b">
+                        Отмена
+                    </button>
+                    <button type="button" onclick="buildFields(); this.closest('form').submit();"
+                        style="background:#DE2028;color:white;border:none;border-radius:8px;padding:8px 20px;font-size:0.83rem;font-weight:700;cursor:pointer;font-family:inherit">
+                        Скачать CSV
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <!-- Покрытие контактами -->
-    <div class="analytics-card" style="margin-bottom:16px">
-        <h3>📇 Покрытие контактами</h3>
-        <div style="font-size:0.83rem;color:#475569;margin-bottom:6px">
-            @orgsWithContacts из @totalOrgs организаций имеют контакты (@contactCoverage%)
-        </div>
-        <div class="coverage-bar">
-            <div class="coverage-fill" style="width:@contactCoverage%"></div>
-        </div>
-    </div>
+    <script>
+    function buildFields() {
+        const form = document.querySelector('#export-modal form');
+        const checked = Array.from(form.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(cb => cb.value);
 
+        let hidden = form.querySelector('input[name="fields"]');
+        if (!hidden) {
+            hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'fields';
+            form.appendChild(hidden);
+        }
+        hidden.value = checked.join(',');
+    }
+    </script>
 </div>

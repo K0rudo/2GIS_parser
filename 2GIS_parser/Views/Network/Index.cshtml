@@ -1,0 +1,373 @@
+﻿@{
+    ViewData["Title"] = "Маршрутизация";
+    ViewData["Page"] = "network";
+}
+
+<style>
+    .network-hero {
+        background: linear-gradient(135deg, #3B455E 0%, #81414D 50%, #DE2028 100%);
+        padding: 22px 28px; color: white;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .network-hero h2 { font-size: 1.35rem; font-weight: 700; margin: 0; }
+    .network-hero span { font-size: 0.82rem; color: rgba(255,255,255,0.7); }
+
+    .network-layout {
+        display: flex;
+        height: calc(100vh - 68px - 80px);
+        overflow: hidden;
+    }
+
+    .nodes-panel {
+        width: 300px; flex-shrink: 0;
+        background: #f0f3f8; overflow-y: auto;
+        border-right: 1px solid #e2e8f0;
+    }
+
+    .nodes-panel-header {
+        padding: 12px 16px; background: white;
+        border-bottom: 1px solid #e8ecf4;
+        font-size: 0.75rem; font-weight: 700;
+        color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;
+        position: sticky; top: 0; z-index: 10;
+    }
+
+    .node-item {
+        padding: 11px 16px; background: white;
+        border-bottom: 1px solid #f0f4f8;
+        cursor: pointer; transition: all 0.15s;
+        display: flex; align-items: center; gap: 10px;
+    }
+    .node-item:hover { background: #fafbfe; }
+    .node-item.active { background: rgba(222,32,40,0.04); border-left: 3px solid #DE2028; }
+
+    .node-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot-hub    { background: #DE2028; }
+    .dot-switch { background: #3B455E; }
+    .dot-client { background: #59A8DD; }
+
+    .node-name { font-size: 0.82rem; font-weight: 600; color: #1a2236; }
+    .node-type { font-size: 0.71rem; color: #94a3b8; margin-top: 2px; }
+
+    #map { flex: 1; }
+
+    .node-popup {
+        position: fixed; background: white;
+        border-radius: 12px; padding: 16px 18px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+        z-index: 9999; width: 280px;
+        display: none; top: 80px; right: 20px;
+    }
+    .node-popup h4 { font-size: 0.9rem; font-weight: 700; color: #1a2236; margin: 0 0 3px; padding-right: 20px; }
+    .popup-type { font-size: 0.72rem; color: #94a3b8; margin-bottom: 10px; }
+    .popup-row { display: flex; gap: 8px; align-items: flex-start; font-size: 0.79rem; color: #475569; margin-bottom: 6px; }
+    .popup-row strong { color: #1a2236; min-width: 90px; flex-shrink: 0; }
+    .popup-close { position: absolute; top: 12px; right: 12px; background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 1rem; }
+
+    .map-legend {
+        position: absolute; top: 10px; left: 10px;
+        background: white; border-radius: 10px;
+        padding: 12px 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+        font-size: 0.75rem; z-index: 1000;
+    }
+    .legend-title { font-weight: 700; color: #1a2236; margin-bottom: 8px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; color: #475569; }
+    .legend-circle { width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); flex-shrink: 0; }
+    .legend-line { width: 24px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+
+    .loading-overlay {
+        position: absolute; inset: 0; background: rgba(240,243,248,0.85);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 2000; font-size: 0.85rem; color: #64748b; gap: 10px;
+    }
+
+    @@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<div class="network-hero">
+    <h2>Схема сети (Пример)</h2>
+</div>
+
+<div class="network-layout">
+
+    <div class="nodes-panel">
+        <div class="nodes-panel-header">Узлы сети</div>
+        <div id="nodes-list"></div>
+    </div>
+
+    <div style="flex:1;position:relative;">
+        <div id="map" style="width:100%;height:100%"></div>
+        <div class="loading-overlay" id="loading">
+            <div style="width:18px;height:18px;border:2px solid #e8ecf4;border-top-color:#DE2028;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+            Загрузка маршрутов по дорогам...
+        </div>
+        <div class="map-legend">
+            <div class="legend-item"><div class="legend-circle" style="background:#DE2028"></div><span>Главный узел (АТС)</span></div>
+            <div class="legend-item"><div class="legend-circle" style="background:#3B455E"></div><span>Коммутационный узел</span></div>
+            <div class="legend-item"><div class="legend-circle" style="background:#59A8DD"></div><span>Клиентский узел</span></div>
+            <div class="legend-item" style="margin-top:8px"><div class="legend-line" style="background:#DE2028"></div><span>Оптоволокно</span></div>
+            <div class="legend-item"><div class="legend-line" style="background:#1d6ae5"></div><span>Медный кабель</span></div>
+        </div>
+    </div>
+</div>
+
+<div class="node-popup" id="node-popup">
+    <button class="popup-close" onclick="closePopup()">✕</button>
+    <h4 id="popup-name"></h4>
+    <div class="popup-type" id="popup-type"></div>
+    <div class="popup-row"><strong>Адрес:</strong><span id="popup-address"></span></div>
+    <div class="popup-row"><strong>Оборудование:</strong><span id="popup-hardware"></span></div>
+    <div class="popup-row"><strong>Статус:</strong><span id="popup-status"></span></div>
+    <div class="popup-row"><strong>Подключений:</strong><span id="popup-connections"></span></div>
+</div>
+<script src="https://mapgl.2gis.com/api/js/v1"></script>
+<script>
+const API_KEY = '45cedc02-a92a-48d0-be46-142b310411b4';
+const nodes = [
+    { id:1,  name:'АТС Центральная',       type:'hub',    lat:52.286649, lon:104.27987, address:'ул. Дзержинского, 1',          hardware:'Cisco ASR 9000, Juniper MX480, Catalyst 6500', active:true,  connections:4 },
+    { id:2,  name:'Узел Кировский',         type:'switch', lat:52.2889,   lon:104.2832,  address:'ул. Рабочая, 2а/4',            hardware:'Cisco Catalyst 3850, Ubiquiti EdgeSwitch 48',  active:true,  connections:3 },
+    { id:3,  name:'Узел Свердловский',      type:'switch', lat:52.2703,   lon:104.2552,  address:'ул. Лермонтова, 78',           hardware:'Cisco Catalyst 2960, Mikrotik CRS326',         active:true,  connections:3 },
+    { id:4,  name:'Узел Октябрьский',       type:'switch', lat:52.2675,   lon:104.3099,  address:'ул. Байкальская, 105а',        hardware:'Cisco Catalyst 3650, Huawei S5720',            active:true,  connections:3 },
+    { id:5,  name:'Узел Куйбышевский',      type:'switch', lat:52.2800,   lon:104.3186,  address:'ул. Декабрьских Событий, 125', hardware:'Mikrotik CCR1036, Cisco Catalyst 2960',        active:true,  connections:2 },
+    { id:6,  name:'Клиент БЦ Сан-Рома',    type:'client', lat:52.2865,   lon:104.2728,  address:'ул. Степана Разина, 5',        hardware:'Ubiquiti UniFi AP, Mikrotik hEX',              active:true,  connections:1 },
+    { id:7,  name:'Клиент БЦ Ладога',      type:'client', lat:52.2800,   lon:104.3402,  address:'ул. Советская, 109',           hardware:'Cisco SG350, Ubiquiti UniFi AP-AC',            active:true,  connections:1 },
+    { id:8,  name:'Клиент БЦ Лисиха',      type:'client', lat:52.2575,   lon:104.3277,  address:'ул. Байкальская, 206',         hardware:'Mikrotik RB951, TP-Link TL-SG1024',            active:true,  connections:1 },
+    { id:9,  name:'Узел Академический',     type:'switch', lat:52.2341,   lon:104.2938,  address:'ул. Академическая, 26',        hardware:'Cisco Catalyst 3850, Juniper EX2300',          active:true,  connections:3 },
+    { id:10, name:'Клиент БЦ Офис-Байкал', type:'client', lat:52.2804,   lon:104.3084,  address:'ул. Карла Либкнехта, 94',      hardware:'Ubiquiti EdgeRouter, Cisco SG110',             active:true,  connections:1 },
+];
+const links = [
+    {
+        from:1, to:2, type:'fiber',
+        waypoints: [
+            [104.27987, 52.286649],
+            [104.280237, 52.2864],
+            [104.282059, 52.286815],
+            [104.282168, 52.288457],
+            [104.28327, 52.288505],
+            [104.2832, 52.2889]
+        ]
+    },
+    {
+        from:2, to:6, type:'copper',
+        waypoints: [
+            [104.2832, 52.2889],
+            [104.28327, 52.288505],
+            [104.282168, 52.288457],
+            [104.281731, 52.289545],
+            [104.275509, 52.288789], 
+            [104.27411, 52.288335], 
+            [104.271796, 52.286839], 
+            [104.272556, 52.28637],
+            [104.2728, 52.2865]
+        ]
+    },
+    {
+        from:1, to:3, type:'fiber',
+        waypoints: [
+            [104.27987, 52.286649],
+            [104.280237, 52.2864],
+            [104.280578, 52.285929], 
+            [104.280937, 52.282193], 
+            [104.279069, 52.281678], 
+            [104.277383, 52.283294], 
+            [104.271847, 52.286666], 
+            [104.260401, 52.28794], 
+            [104.25812, 52.28799], 
+            [104.257558, 52.287021], 
+            [104.259404, 52.281887], 
+            [104.25571, 52.279636], 
+            [104.257784, 52.275824], 
+            [104.253615, 52.274807], 
+            [104.255801, 52.270531],
+            [104.2552, 52.2703]
+        ]
+    },
+    {
+        from:4, to:5, type:'fiber',
+        waypoints: [
+            [104.3099, 52.2675],
+            [104.308933, 52.267148], 
+            [104.303478, 52.276348], 
+            [104.318837, 52.279108],
+            [104.3186, 52.2800]
+        ]
+    },
+    {
+        from:1, to:5, type:'fiber',
+        waypoints: [
+            [104.27987, 52.286649],
+            [104.280237, 52.2864],
+            [104.280578, 52.285929],
+            [104.280937, 52.282193],
+            [104.28246, 52.279998], 
+            [104.294778, 52.29024], 
+            [104.317943, 52.279533],
+            [104.3186, 52.2800]
+        ]
+    },
+    {
+        from:9, to:1, type:'fiber',
+        waypoints: [
+            [104.2938, 52.2341],
+            [104.294219, 52.235242], 
+            [104.293911, 52.237187], 
+            [104.292823, 52.238038], 
+            [104.286957, 52.239935], 
+            [104.282228, 52.242773], 
+            [104.274504, 52.254707], 
+            [104.292318, 52.26737], 
+            [104.293305, 52.268278], 
+            [104.293527, 52.269237], 
+            [104.29281, 52.270349], 
+            [104.285829, 52.276154],
+            [104.28246, 52.279998],
+            [104.280937, 52.282193],
+            [104.280578, 52.285929],
+            [104.280237, 52.2864],
+            [104.27987, 52.286649]
+        ]
+    },
+    {
+        from:3, to:9, type:'fiber',
+        waypoints: [
+            [104.2552, 52.2703], 
+            [104.255801, 52.270531],
+            [104.262599, 52.257254], 
+            [104.263599, 52.254587], 
+            [104.270891, 52.254115],
+            [104.274504, 52.254707], 
+            [104.282228, 52.242773],
+            [104.286957, 52.239935],
+            [104.292823, 52.238038],
+            [104.293911, 52.237187],
+            [104.294219, 52.235242],
+            [104.2938, 52.2341]
+        ]
+    },
+    {
+        from:5, to:10, type:'copper',
+        waypoints: [
+            [104.3186, 52.2800],
+            [104.318837, 52.279108],
+            [104.309164, 52.277452], 
+            [104.307615, 52.279628],
+            [104.30769, 52.279896],
+            [104.3084, 52.2804]
+        ]
+    },
+    {
+        from:5, to:7, type:'copper',
+        waypoints: [
+            [104.3186, 52.2800],
+            [104.318837, 52.279108],
+            [104.323702, 52.279963], 
+            [104.340198, 52.279783],
+            [104.3402, 52.2800]
+        ]
+    },
+    {
+        from:4, to:8, type:'copper',
+        waypoints: [
+            [104.3099, 52.2675],
+            [104.308933, 52.267148],
+            [104.310662, 52.264281], 
+            [104.327848, 52.257824],
+            [104.3277, 52.2575]
+        ]
+    },
+];
+const nodeColors = { hub:'#DE2028', switch:'#3B455E', client:'#59A8DD' };
+const nodeLabels = { hub:'Главный узел (АТС)', switch:'Коммутационный узел', client:'Клиентский узел' };
+
+const map = new mapgl.Map('map', {
+    center: [104.295, 52.270],
+    zoom: 12,
+    key: API_KEY
+});
+
+// Рисуем линии по дорогам
+function drawRoutes() {
+    for (const link of links) {
+        const coords = link.waypoints;
+        const color  = link.type === 'fiber' ? '#DE2028' : '#1d6ae5';
+        const width  = link.type === 'fiber' ? 3 : 2;
+        try {
+            new mapgl.Polyline(map, { coordinates: coords, color, width, opacity: 0.8 });
+        } catch(e) {
+            coords.forEach((c, i) => {
+                if (i % 3 !== 0) return;
+                new mapgl.HtmlMarker(map, {
+                    coordinates: c,
+                    html: `<div style="width:4px;height:4px;border-radius:50%;background:${color};opacity:0.75"></div>`,
+                    anchor: [2, 2]
+                });
+            });
+        }
+    }
+    document.getElementById('loading').style.display = 'none';
+}
+
+// Рисуем маркеры узлов
+nodes.forEach(node => {
+    const color = nodeColors[node.type];
+    const size  = node.type === 'hub' ? 18 : node.type === 'switch' ? 14 : 12;
+    const opacity = node.active ? 1 : 0.4;
+
+    const marker = new mapgl.HtmlMarker(map, {
+        coordinates: [node.lon, node.lat],
+        html: `<div onclick="showPopupByNode(${node.id})"
+            style="width:${size}px;height:${size}px;border-radius:50%;
+                   background:${color};border:2px solid white;
+                   box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;
+                   opacity:${opacity};transition:transform 0.15s"
+            onmouseover="this.style.transform='scale(1.3)'"
+            onmouseout="this.style.transform='scale(1)'">
+        </div>`,
+        anchor: [size/2, size/2]
+    });
+});
+
+map.on('click', closePopup);
+drawRoutes();
+// Боковая панель
+const list = document.getElementById('nodes-list');
+nodes.forEach(node => {
+    const item = document.createElement('div');
+    item.className = 'node-item';
+    item.id = 'node-item-' + node.id;
+    item.innerHTML = `
+        <div class="node-dot dot-${node.type}"></div>
+        <div>
+            <div class="node-name">${node.name}</div>
+            <div class="node-type">${nodeLabels[node.type]}${!node.active ? ' · Неактивен' : ''}</div>
+        </div>`;
+    item.onclick = () => {
+        map.setCenter([node.lon, node.lat]);
+        map.setZoom(15);
+        showPopupByNode(node.id);
+        document.querySelectorAll('.node-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+    };
+    list.appendChild(item);
+});
+
+function showPopupByNode(nodeId) {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    document.getElementById('popup-name').textContent        = node.name;
+    document.getElementById('popup-type').textContent        = nodeLabels[node.type];
+    document.getElementById('popup-address').textContent     = node.address;
+    document.getElementById('popup-hardware').textContent    = node.hardware;
+    document.getElementById('popup-connections').textContent = node.connections + ' соединений';
+    document.getElementById('popup-status').textContent = node.active ? 'Активен' : 'Неактивен';
+    document.getElementById('node-popup').style.display = 'block';
+    document.querySelectorAll('.node-item').forEach(i => i.classList.remove('active'));
+    const item = document.getElementById('node-item-' + node.id);
+    if (item) item.classList.add('active');
+}
+
+function closePopup() {
+    document.getElementById('node-popup').style.display = 'none';
+    document.querySelectorAll('.node-item').forEach(i => i.classList.remove('active'));
+}
+</script>
