@@ -152,7 +152,7 @@ namespace _2GIS_parser.Controllers
             return Json(contacts);
         }
 
-        private static double CalculateDistance(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
+        public static double CalculateDistance(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
         {
             const double R = 6371;
             var dLat = ((double)(lat2 - lat1)) * Math.PI / 180;
@@ -161,6 +161,22 @@ namespace _2GIS_parser.Controllers
                     Math.Cos((double)lat1 * Math.PI / 180) * Math.Cos((double)lat2 * Math.PI / 180) *
                     Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
             return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Geocode(string address)
+        {
+            try
+            {
+                using var client = new HttpClient();
+                var url = $"https://catalog.api.2gis.com/3.0/items/geocode?q={Uri.EscapeDataString(address)}&fields=items.point&key=d18a4a4a-f927-44e1-82fc-77656e228906";
+                var response = await client.GetStringAsync(url);
+                return Content(response, "application/json");
+            }
+            catch
+            {
+                return Content("{\"result\":{\"items\":[]}}", "application/json");
+            }
         }
     }
 }

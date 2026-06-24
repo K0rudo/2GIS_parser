@@ -38,8 +38,12 @@ namespace _2GIS_parser.Controllers
                 .OrderBy(c => c)
                 .ToListAsync();
 
-            ViewBag.Districts = await _db.Organizations
-                .Where(o => !string.IsNullOrEmpty(o.District))
+            var districtQuery = _db.Organizations.Where(o => o.District != null && o.District != "");
+
+            if (!string.IsNullOrEmpty(filterCity))
+                districtQuery = districtQuery.Where(o => o.City == filterCity);
+
+            ViewBag.Districts = await districtQuery
                 .Select(o => o.District)
                 .Distinct()
                 .OrderBy(d => d)
@@ -197,7 +201,23 @@ namespace _2GIS_parser.Controllers
 
             var sb = new System.Text.StringBuilder();
 
-            // Заголовок
+            var headers = AnalyticsController.BuildHeaders(selectedFields);
+            sb.AppendLine(string.Join(";", headers));
+
+            foreach (var org in orgs)
+            {
+                var row = AnalyticsController.BuildRow(org, selectedFields);
+                sb.AppendLine(string.Join(";", row));
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetPreamble()
+                .Concat(System.Text.Encoding.UTF8.GetBytes(sb.ToString()))
+                .ToArray();
+
+            return File(bytes, "text/csv", $"organizations_{DateTime.Now:yyyyMMdd}.csv");
+        }
+        public static List<string> BuildHeaders(HashSet<string> selectedFields)
+        {
             var headers = new List<string>();
             if (selectedFields.Contains("name")) headers.Add("Название");
             if (selectedFields.Contains("city")) headers.Add("Город");
@@ -211,31 +231,41 @@ namespace _2GIS_parser.Controllers
             if (selectedFields.Contains("email")) headers.Add("Email");
             if (selectedFields.Contains("telegram")) headers.Add("Telegram");
             if (selectedFields.Contains("whatsapp")) headers.Add("WhatsApp");
-            sb.AppendLine(string.Join(";", headers));
+            return headers;
+        }
 
-            foreach (var org in orgs)
-            {
-                var row = new List<string>();
-                if (selectedFields.Contains("name")) row.Add(org.Name ?? "");
-                if (selectedFields.Contains("city")) row.Add(org.City ?? "");
-                if (selectedFields.Contains("address")) row.Add(org.Address ?? "");
-                if (selectedFields.Contains("category")) row.Add(org.CategoryName ?? "");
-                if (selectedFields.Contains("district")) row.Add(org.District ?? "");
-                if (selectedFields.Contains("rating")) row.Add(org.Rating?.ToString("F1") ?? "");
-                if (selectedFields.Contains("reviews")) row.Add(org.ReviewCount?.ToString() ?? "");
-                if (selectedFields.Contains("phones")) row.Add(string.Join(", ", org.Contacts.Where(c => c.ContactType == "phone").Select(c => "'" + c.Value)));
-                if (selectedFields.Contains("website")) row.Add(string.Join(", ", org.Contacts.Where(c => c.ContactType == "website").Select(c => c.Value)));
-                if (selectedFields.Contains("email")) row.Add(string.Join(", ", org.Contacts.Where(c => c.ContactType == "email").Select(c => c.Value)));
-                if (selectedFields.Contains("telegram")) row.Add(string.Join(", ", org.Contacts.Where(c => c.ContactType == "telegram").Select(c => c.Value)));
-                if (selectedFields.Contains("whatsapp")) row.Add(string.Join(", ", org.Contacts.Where(c => c.ContactType == "whatsapp").Select(c => c.Value)));
-                sb.AppendLine(string.Join(";", row));
-            }
+        public static List<string> BuildRow(Organization org, HashSet<string> selectedFields)
+        {
+            var row = new List<string>();
+            if (selectedFields.Contains("name")) row.Add(org.Name ?? "");
+            if (selectedFields.Contains("city")) row.Add(org.City ?? "");
+            if (selectedFields.Contains("address")) row.Add(org.Address ?? "");
+            if (selectedFields.Contains("category")) row.Add(org.CategoryName ?? "");
+            if (selectedFields.Contains("district")) row.Add(org.District ?? "");
+            if (selectedFields.Contains("rating")) row.Add(org.Rating?.ToString("F1") ?? "");
+            if (selectedFields.Contains("reviews")) row.Add(org.ReviewCount?.ToString() ?? "");
+            if (selectedFields.Contains("phones")) row.Add(string.Join(", ", org.Contacts
+                .Where(c => c.ContactType == "phone").Select(c => "'" + c.Value)));
+            if (selectedFields.Contains("website")) row.Add(string.Join(", ", org.Contacts
+                .Where(c => c.ContactType == "website").Select(c => c.Value)));
+            if (selectedFields.Contains("email")) row.Add(string.Join(", ", org.Contacts
+                .Where(c => c.ContactType == "email").Select(c => c.Value)));
+            if (selectedFields.Contains("telegram")) row.Add(string.Join(", ", org.Contacts
+                .Where(c => c.ContactType == "telegram").Select(c => c.Value)));
+            if (selectedFields.Contains("whatsapp")) row.Add(string.Join(", ", org.Contacts
+                .Where(c => c.ContactType == "whatsapp").Select(c => c.Value)));
+            return row;
+        }
 
-            var bytes = System.Text.Encoding.UTF8.GetPreamble()
-                .Concat(System.Text.Encoding.UTF8.GetBytes(sb.ToString()))
-                .ToArray();
-
-            return File(bytes, "text/csv", $"organizations_{DateTime.Now:yyyyMMdd}.csv");
+        public static string DetermineContactType(string url, string defaultType = "website")
+        {
+            var lower = url.ToLower();
+            if (lower.Contains("t.me") || lower.Contains("telegram")) return "telegram";
+            if (lower.Contains("wa.me") || lower.Contains("whatsapp")) return "whatsapp";
+            if (lower.Contains("vk.com")) return "vk";
+            if (lower.Contains("instagram.com")) return "instagram";
+            return defaultType;
         }
     }
+
 }

@@ -270,7 +270,7 @@
         gap: 6px;
     }
 
-    /* Контакты — сетка из аккуратных строк */
+    /* Контакты - сетка из аккуратных строк */
     .contacts-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -326,7 +326,7 @@
     .icon-telegram { background: rgba(0,136,204,0.12);   color: #0088cc; }
     .icon-whatsapp { background: rgba(37,211,102,0.12);  color: #16a34a; }
 
-    /* Часы работы — компактная сетка по дням */
+    /* Часы работы - компактная сетка по дням */
     .hours-grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
@@ -378,7 +378,7 @@
         font-weight: 700;
     }
 
-    /* Район — мини-блок */
+    /* Район - мини-блок */
     .district-block {
         display: flex;
         align-items: center;
@@ -503,7 +503,7 @@
 <div class="results-hero">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div>
-            <h2>«@job?.SearchQuery» — @job?.City</h2>
+            <h2>«@job?.SearchQuery» - @job?.City</h2>
             <div class="hero-meta">
                 <span>Найдено: <strong style="color:#fff">@Model.Count</strong></span>
                 @if (job?.CompletedAt.HasValue == true)
@@ -554,7 +554,7 @@
             }
         </select>
     </form>
-    <input type="text" id="liveSearch" class="filter-input" placeholder="🔍 Поиск по названию..." />
+    <input type="text" id="liveSearch" class="filter-input" placeholder="Поиск по названию..." />
     <span class="count-label" id="countLabel">@Model.Count орг.</span>
 </div>
 
@@ -567,7 +567,6 @@
         @if (!Model.Any())
         {
             <div class="empty-cards">
-                <div style="font-size:2.5rem">🔍</div>
                 <h5>Ничего не найдено</h5>
                 <p style="font-size:0.85rem">Измените запрос или уберите фильтр</p>
             </div>
@@ -604,7 +603,7 @@
                 <div class="card-mid">
                     @if (!string.IsNullOrEmpty(org.Address))
                     {
-                        <div class="org-address">📍 @org.Address</div>
+                        <div class="org-address">@org.Address</div>
                     }
                     @if (!string.IsNullOrEmpty(org.CategoryName))
                     {
@@ -621,7 +620,7 @@
                         @if (hasContacts)
                         {
                             <div class="details-section">
-                                <div class="details-section-title">📇 Контакты</div>
+                                <div class="details-section-title">Контакты</div>
                                 <div class="contacts-grid">
                                     @foreach (var p in phones)
                                     {
@@ -664,16 +663,15 @@
                         @if (!string.IsNullOrEmpty(org.WorkingHours))
                         {
                             <div class="details-section">
-                                <div class="details-section-title">🕐 Часы работы</div>
+                                <div class="details-section-title">Часы работы</div>
                                 <div class="hours-grid" data-hours="@org.WorkingHours"></div>
                             </div>
                         }
                         @if (!string.IsNullOrEmpty(org.District))
                         {
                             <div class="details-section">
-                                <div class="details-section-title">📍 Расположение</div>
+                                <div class="details-section-title">Расположение</div>
                                 <div class="district-block">
-                                    <span>🏙️</span>
                                     <span>Район: <strong>@org.District</strong></span>
                                 </div>
                             </div>
@@ -691,7 +689,7 @@
                                 data-lat="@latStr"
                                 data-lon="@lonStr"
                                 onclick="event.stopPropagation(); openRoute(this)">
-                            🗺️ Маршрут
+                            Маршрут
                         </button>
                     }
                 </div>
@@ -715,7 +713,7 @@
     <script src="https://unpkg.com/@@2gis/mapgl-directions@@2/dist/directions.js"></script>
     <script>
     const orgs = @Html.Raw(orgsJson);
-    const API_KEY = 'd18a4a4a-f927-44e1-82fc-77656e228906';
+    const API_KEY = '45cedc02-a92a-48d0-be46-142b310411b4';
 
     let map = null;
     let directions = null;
@@ -773,7 +771,7 @@
     } else {
         document.getElementById('map').innerHTML =
             '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#eef2f7;color:#94a3b8;gap:10px">' +
-            '<span style="font-size:2.5rem">🗺️</span><p style="font-weight:600;margin:0">Нет координат для карты</p></div>';
+            '<p style="font-weight:600;margin:0">Нет координат для карты</p></div>';
     }
 
     function activateCard(id) {
@@ -797,33 +795,35 @@
 
     async function geocodeAddress() {
         const input = document.getElementById('userAddress');
-        const hint  = document.getElementById('addressHint');
+        const hint = document.getElementById('addressHint');
         const address = input.value.trim();
-        if (!address) return;
+        if (!address) {
+            input.className = 'error';
+            hint.textContent = 'Введите адрес для поиска маршрута';
+            hint.className = 'address-hint error';
+            input.focus();
+            return;
+        }
 
         hint.textContent = 'Поиск...';
         hint.className = 'address-hint';
 
-        const res = await fetch(
-            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
-            { headers: { 'User-Agent': 'SvyazTransit/1.0' } }
-        );
+        const res = await fetch(`/Search/Geocode?address=${encodeURIComponent(address)}`);
         const data = await res.json();
 
-        if (!data.length) {
+        const items = data?.result?.items;
+        if (!items || !items.length) {
             input.className = 'error';
-            hint.textContent = '✗ Адрес не найден. Уточните запрос.';
+            hint.textContent = 'Адрес не найден. Уточните запрос.';
             hint.className = 'address-hint error';
             userCoords = null;
             return;
         }
 
-        userCoords = [parseFloat(data[0].lon), parseFloat(data[0].lat)];
+        const point = items[0].point;
+        userCoords = [point.lon, point.lat];
         input.className = 'success';
-
-        // Показываем найденный адрес (первые 3 части)
-        const foundAddress = data[0].display_name.split(',').slice(0, 3).join(',');
-        hint.textContent = `✓ Найдено: ${foundAddress}`;
+        hint.textContent = `Найдено: ${items[0].full_name ?? address}`;
         hint.className = 'address-hint success';
     }
 
@@ -835,7 +835,7 @@
 
         if (!userCoords) {
             input.className = 'error';
-            hint.textContent = '✗ Сначала введите адрес и нажмите «Найти»';
+            hint.textContent = 'Сначала введите адрес и нажмите «Найти»';
             hint.className = 'address-hint error';
             input.focus();
             return;
@@ -897,12 +897,12 @@
             let timeClass = 'hour-time';
 
             if (isClosed) {
-                timeDisplay = '—';
+                timeDisplay = '-';
             } else if (is24h) {
                 timeDisplay = '24/7';
                 timeClass += ' round-clock';
             } else {
-                timeDisplay = time.replace('-', '–');
+                timeDisplay = time.replace('-', '-');
             }
 
             const cellClass = ['hour-cell'];
@@ -950,7 +950,7 @@
                     const card = document.getElementById('card-' + orgId);
                     if (!card) return;
 
-                    // Уже есть контакты — пропускаем (защита от дубликатов)
+                    // Уже есть контакты - пропускаем (защита от дубликатов)
                     if (card.querySelector('.contacts-grid')) return;
 
                     const contacts = contactMap[orgId];
@@ -960,7 +960,7 @@
                     let details = card.querySelector('.card-details');
                     let toggleBtn = card.querySelector('.btn-toggle');
 
-                    // Если у карточки ещё нет блока «Подробнее» — создаём его
+                    // Если у карточки ещё нет блока «Подробнее» - создаём его
                     if (!details) {
                         toggleBtn = document.createElement('button');
                         toggleBtn.className = 'btn-toggle';
@@ -979,7 +979,7 @@
                     const section = document.createElement('div');
                     section.className = 'details-section';
                     section.innerHTML = `
-                        <div class="details-section-title">📇 Контакты</div>
+                        <div class="details-section-title">Контакты</div>
                         <div class="contacts-grid">${itemsHtml}</div>
                     `;
                     details.insertBefore(section, details.firstChild);
@@ -1033,14 +1033,14 @@
                     <button onclick="document.getElementById('office-popup').remove()"
                         style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#94a3b8">✕</button>
                 </div>
-                <div style="font-size:0.82rem;color:#64748b;margin-bottom:4px">📍 ${office.address}${office.floor ? ', ' + office.floor : ''}</div>
+                <div style="font-size:0.82rem;color:#64748b;margin-bottom:4px">${office.address}${office.floor ? ', ' + office.floor : ''}</div>
                 ${office.phone1 ? `<div style="margin-top:8px"><a href="tel:${office.phone1}" style="color:#DE2028;font-weight:600;text-decoration:none">📞 ${office.phone1}</a></div>` : ''}
                 ${office.phone2 ? `<div style="margin-top:4px"><a href="tel:${office.phone2}" style="color:#DE2028;font-weight:600;text-decoration:none">📞 ${office.phone2}</a></div>` : ''}
-                ${office.website ? `<div style="margin-top:4px"><a href="${office.website}" target="_blank" style="color:#3B455E;text-decoration:none">🌐 ${office.website}</a></div>` : ''}
-                ${office.hours ? `<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border-radius:8px;font-size:0.78rem;color:#475569">🕐 ${office.hours}</div>` : ''}
+                ${office.website ? `<div style="margin-top:4px"><a href="${office.website}" target="_blank" style="color:#3B455E;text-decoration:none">${office.website}</a></div>` : ''}
+                ${office.hours ? `<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border-radius:8px;font-size:0.78rem;color:#475569">${office.hours}</div>` : ''}
                 <button onclick="setOfficeAsOrigin(${office.lon}, ${office.lat}); document.getElementById('office-popup').remove();"
                     style="margin-top:12px;width:100%;background:#DE2028;color:white;border:none;border-radius:8px;padding:8px;font-size:0.83rem;font-weight:700;cursor:pointer;font-family:inherit;">
-                    🗺️ Проложить маршрут отсюда
+                    Проложить маршрут отсюда
                 </button>
                 <div style="margin-top:4px;font-size:0.72rem;color:#DE2028;font-weight:600;text-align:center">Офис СвязьТранзит</div>
             </div>

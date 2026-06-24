@@ -2,8 +2,8 @@ import requests
 import pyodbc
 import sys
 from datetime import datetime
+from queries import QUERIES
 
-# Подключение к БД
 conn_str = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
     "SERVER=localhost\\SQLEXPRESS;"
@@ -12,7 +12,10 @@ conn_str = (
 )
 
 API_KEY = "45cedc02-a92a-48d0-be46-142b310411b4"
-
+DAYS_MAP = [
+    ("Mon", "Пн"), ("Tue", "Вт"), ("Wed", "Ср"),
+    ("Thu", "Чт"), ("Fri", "Пт"), ("Sat", "Сб"), ("Sun", "Вс")
+]
 
 def get_connection():
     return pyodbc.connect(conn_str)
@@ -32,36 +35,15 @@ def search_organizations(city, query):
     if "result" not in data or "items" not in data["result"]:
         return []
 
-    return data["result"]["items"]
-
-    """results = []
-    page = 1
-
-    while True:
-        params["page"] = page
-        response = requests.get(url, params=params)
-        data = response.json()
-
-        if "result" not in data or "items" not in data["result"]:
-            break
-
-        items = data["result"]["items"]
-        if not items:
-            break
-
-        results.extend(items)
-
-        if len(items) < 10:
-            break
-        page += 1
-
-    return results"""
+    items = data["result"]["items"]
+    items = [i for i in items if i.get("rubrics")]
+    return items
 
 def save_organization(cursor, item, city, job_id):
     external_id = item.get("id", "")
     name = item.get("name", "")
     address = item.get("address_name", "")
-    # Район
+
     district = ""
     adm_div = item.get("adm_div", [])
     for div in adm_div:
@@ -69,30 +51,22 @@ def save_organization(cursor, item, city, job_id):
             district = div.get("name", "")
             break
 
-    # Категория
     rubrics = item.get("rubrics", [])
     category = rubrics[0].get("name", "") if rubrics else ""
 
-    # Рейтинг и отзывы
     reviews_data = item.get("reviews", {})
     rating = reviews_data.get("general_rating", None)
     reviews = reviews_data.get("general_review_count", None)
 
-    # Координаты
     point = item.get("point", {})
     lat = point.get("lat") if point else None
     lon = point.get("lon") if point else None
 
-    # Часы работы
     working_hours = ""
     schedule = item.get("schedule", {})
     if schedule:
-        days_map = [
-            ("Mon", "Пн"), ("Tue", "Вт"), ("Wed", "Ср"),
-            ("Thu", "Чт"), ("Fri", "Пт"), ("Sat", "Сб"), ("Sun", "Вс")
-        ]
         parts = []
-        for day_key, day_name in days_map:
+        for day_key, day_name in DAYS_MAP:
             info = schedule.get(day_key, {})
             if isinstance(info, dict) and info.get("working_hours"):
                 wh = info["working_hours"][0]
@@ -101,37 +75,29 @@ def save_organization(cursor, item, city, job_id):
                 parts.append(f"{day_name} —")
         working_hours = ", ".join(parts)
 
-    # Проверяем дубликат
-    cursor.execute("SELECT Id FROM Organizations WHERE ExternalId = ?", external_id)
+    cursor.execute(QUERIES['select_org_by_external'], external_id)
     row = cursor.fetchone()
 
     if row:
         org_id = row[0]
-        cursor.execute("""
-            UPDATE Organizations 
-            SET Name=?, Address=?, CategoryName=?, Rating=?, ReviewCount=?, 
-                Latitude=?, Longitude=?, WorkingHours=?, District=?, UpdatedAt=GETDATE()
-            WHERE Id=?
-        """, name, address, category, rating, reviews, lat, lon, working_hours, district, org_id)
+        cursor.execute(QUERIES['update_org'],
+            name, address, category, rating, reviews,
+            lat, lon, working_hours, district, org_id)
         if item.get("contact_groups"):
-            cursor.execute("DELETE FROM Contacts WHERE OrganizationId=?", org_id)
+            cursor.execute(QUERIES['delete_contacts'], org_id)
     else:
-        cursor.execute("""
-            INSERT INTO Organizations (ExternalId, Name, City, Address, CategoryName, Rating, ReviewCount, Latitude, Longitude, WorkingHours, District)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, external_id, name, city, address, category, rating, reviews, lat, lon, working_hours, district)
+        cursor.execute(QUERIES['insert_org'],
+            external_id, name, city, address, category,
+            rating, reviews, lat, lon, working_hours, district)
         cursor.execute("SELECT @@IDENTITY")
         org_id = int(cursor.fetchone()[0])
 
-    # Контакты из API (для платного ключа)
     for group in item.get("contact_groups", []):
         for contact in group.get("contacts", []):
             ctype = contact.get("type", "other")
-            # Сайты и соцсети используют поле 'url', остальные — 'value'
             value = contact.get("url") or contact.get("value", "")
             if not value:
                 continue
-            # Определяем соцсети по URL
             url_lower = value.lower()
             if "t.me" in url_lower or "telegram" in url_lower:
                 ctype = "telegram"
@@ -142,17 +108,9 @@ def save_organization(cursor, item, city, job_id):
             elif "instagram.com" in url_lower:
                 ctype = "instagram"
 
-            cursor.execute("""
-                INSERT INTO Contacts (OrganizationId, ContactType, Value)
-                VALUES (?, ?, ?)
-            """, org_id, ctype, value)
+            cursor.execute(QUERIES['insert_contact'], org_id, ctype, value)
 
-    # Связываем с заданием
-    cursor.execute("""
-        IF NOT EXISTS (SELECT 1 FROM ParseJobOrganizations WHERE ParseJobId=? AND OrganizationId=?)
-        INSERT INTO ParseJobOrganizations VALUES (?, ?)
-    """, job_id, org_id, job_id, org_id)
-
+    cursor.execute(QUERIES['link_job_org'], job_id, org_id, job_id, org_id)
     return org_id
 
 
@@ -160,29 +118,21 @@ def run_parser(job_id, city, query):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("UPDATE ParseJobs SET Status='Running', StartedAt=? WHERE Id=?", datetime.now(), job_id)
+    cursor.execute(QUERIES['set_status_running'], datetime.now(), job_id)
     conn.commit()
 
     try:
         items = search_organizations(city, query)
-        """
-        for item in items:
-            print(f"=== {item.get('name')} ===")
-            print(f"contact_groups: {item.get('contact_groups', 'НЕТ')}")
-            print()
-        """
         for item in items:
             save_organization(cursor, item, city, job_id)
             conn.commit()
 
-        cursor.execute("""
-            UPDATE ParseJobs SET Status='Completed', CompletedAt=?, TotalFound=? WHERE Id=?
-        """, datetime.now(), len(items), job_id)
+        cursor.execute(QUERIES['set_status_completed'], datetime.now(), len(items), job_id)
         conn.commit()
         print(f"Готово! Найдено: {len(items)}")
 
     except Exception as e:
-        cursor.execute("UPDATE ParseJobs SET Status='Failed', ErrorMessage=? WHERE Id=?", str(e), job_id)
+        cursor.execute(QUERIES['set_status_failed'], str(e), job_id)
         conn.commit()
         print(f"Ошибка: {e}")
     finally:

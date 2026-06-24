@@ -58,7 +58,7 @@
 </style>
 
 <div class="analytics-hero" style="display:flex;align-items:center;justify-content:space-between">
-    <h2>📊 Аналитика и отчёты</h2>
+    <h2>Аналитика и отчёты</h2>
     <button onclick="document.getElementById('export-modal').style.display='flex'"
         style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;border-radius:8px;padding:7px 16px;font-size:0.83rem;font-weight:700;cursor:pointer;font-family:inherit">
         📥 Скачать CSV
@@ -81,7 +81,7 @@
             </select>
         </div>
 
-        @if (analyticsType == "overview" || analyticsType == "districts" || analyticsType == "rating" || analyticsType == "top")
+        @if (analyticsType == "overview" || analyticsType == "districts" || analyticsType == "rating" || analyticsType == "top" || analyticsType == "contacts")
         {
             <div class="control-group">
                 <label>Город</label>
@@ -113,21 +113,6 @@
                     {
                         if (filterCategory == c) { <option value="@c" selected>@c</option> }
                         else                     { <option value="@c">@c</option> }
-                    }
-                </select>
-            </div>
-        }
-
-        @if (analyticsType == "contacts")
-        {
-            <div class="control-group">
-                <label>Район</label>
-                <select name="filterDistrict">
-                    <option value="">Все районы</option>
-                    @foreach (var d in districts)
-                    {
-                        if (filterDistrict == d) { <option value="@d" selected>@d</option> }
-                        else                     { <option value="@d">@d</option> }
                     }
                 </select>
             </div>
@@ -171,7 +156,7 @@
 
                 <div class="analytics-grid">
                     <div class="analytics-card" style="margin-bottom:0">
-                        <h3>🏙️ По районам</h3>
+                        <h3>По районам</h3>
                         @if (byDist != null && byDist.Count > 0)
                         {
                             foreach (var item in byDist)
@@ -193,7 +178,7 @@
                         }
                     </div>
                     <div class="analytics-card" style="margin-bottom:0">
-                        <h3>📊 Покрытие контактами</h3>
+                        <h3>Покрытие контактами</h3>
                         <div style="font-size:0.83rem;color:#475569;margin-bottom:8px">@orgsWithContacts из @totalOrgs имеют контакты (@contactCoverage%)</div>
                         <div class="coverage-bar"><div class="coverage-fill" style="width:@contactCoverage%"></div></div>
                         <div style="margin-top:16px;font-size:0.79rem;color:#64748b">Средний рейтинг: <strong style="color:#DE2028">@avgRating.ToString("F1")</strong></div>
@@ -216,7 +201,7 @@
             else
             {
                 <div class="analytics-card">
-                    <h3>📇 Контакты организаций — @orgContacts.Count орг.</h3>
+                    <h3>Контакты организаций — @orgContacts.Count орг.</h3>
                     <table class="orgs-table">
                         <thead><tr><th>Название</th><th>Адрес</th><th>Телефон</th><th>Сайт</th><th>Email</th><th>TG</th><th>WA</th></tr></thead>
                         <tbody>
@@ -265,7 +250,7 @@
                     }
 
                 <div class="analytics-card">
-                    <h3>🏙️ Распределение по районам — @filterCity</h3>
+                    <h3>Распределение по районам — @filterCity</h3>
                     @if (byDist2 != null && byDist2.Count > 0)
                     {
                         foreach (var item in byDist2)
@@ -399,7 +384,7 @@
                 }
 
                 <div class="analytics-card">
-                    <h3>📊 Сравнение категорий</h3>
+                    <h3>Сравнение категорий</h3>
                     <table class="orgs-table">
                         <thead>
                             <tr>

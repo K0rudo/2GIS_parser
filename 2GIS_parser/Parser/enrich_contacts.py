@@ -4,6 +4,7 @@ import sys
 import os
 import tempfile
 import subprocess
+from queries import QUERIES
 
 conn_str = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
@@ -31,7 +32,7 @@ def get_connection():
 
 
 def save_contacts(cursor, org_id: int, item: dict):
-    cursor.execute("DELETE FROM Contacts WHERE OrganizationId = ?", org_id)
+    cursor.execute(QUERIES['delete_contacts'], org_id)
     for group in item.get('contact_groups', []):
         for contact in group.get('contacts', []):
             ctype = contact.get('type', 'other')
@@ -56,10 +57,7 @@ def save_contacts(cursor, org_id: int, item: dict):
                     ctype = 'viber'
 
             try:
-                cursor.execute(
-                    "INSERT INTO Contacts (OrganizationId, ContactType, Value) VALUES (?, ?, ?)",
-                    org_id, ctype, value
-                )
+                cursor.execute(QUERIES['insert_contact'], org_id, ctype, value)
             except Exception:
                 pass
 
@@ -108,7 +106,7 @@ def enrich_contacts(job_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT City, SearchQuery FROM ParseJobs WHERE Id = ?", job_id)
+    cursor.execute(QUERIES['get_job'], job_id)
     job = cursor.fetchone()
     if not job:
         conn.close()
@@ -117,39 +115,26 @@ def enrich_contacts(job_id: int):
     city, search_query = job
     slug = CITY_SLUGS.get(city.lower(), city.lower())
 
-    # Берём организации с районом и ExternalId
-    cursor.execute("""
-        SELECT o.Id, o.Name, o.ExternalId, o.District
-        FROM Organizations o
-        INNER JOIN ParseJobOrganizations pjo ON pjo.OrganizationId = o.Id
-        WHERE pjo.ParseJobId = ?
-    """, job_id)
+    cursor.execute(QUERIES['get_orgs_by_job'], job_id)
     orgs = cursor.fetchall()
 
     if not orgs:
         conn.close()
         return
 
-    # Словарь ExternalId -> org_id
     ext_lookup = {
         external_id: org_id
         for org_id, name, external_id, district in orgs
         if external_id
     }
 
-    # Группируем организации по районам
     district_groups = {}
-    """no_district = []"""
-
     for org_id, name, external_id, district in orgs:
         if district:
             if district not in district_groups:
                 district_groups[district] = []
             district_groups[district].append((org_id, external_id))
-            """else:
-            no_district.append((org_id, external_id))"""
 
-    # Для каждого района — отдельный поиск
     for district, district_orgs in district_groups.items():
         url = f"https://2gis.ru/{slug}/search/{search_query.replace(' ', '%20')}%20{district.replace(' ', '%20')}"
         items = parse_url(url)
@@ -164,22 +149,6 @@ def enrich_contacts(job_id: int):
             org_id = ext_lookup[ext_id]
             save_contacts(cursor, org_id, item)
             conn.commit()
-
-    """# Организации без района
-    if no_district:
-        url = f"https://2gis.ru/{slug}/search/{search_query.replace(' ', '%20')}"
-        items = parse_url(url)
-
-        for item in items:
-            full_id = item.get('id', '')
-            ext_id = full_id.split('_')[0] if '_' in full_id else full_id
-
-            if ext_id not in ext_lookup:
-                continue
-
-            org_id = ext_lookup[ext_id]
-            save_contacts(cursor, org_id, item)
-            conn.commit()"""
 
     conn.close()
 
